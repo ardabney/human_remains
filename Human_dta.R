@@ -332,7 +332,7 @@ temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Manner.of.Death
 plot_ordination(ave_dta,temp_ord,type="samples",color="Manner.of.Death",title="Manner.of.Death")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Season)
-plot_ordination(ave_dta,temp_ord,type="samples",color="Estimated_PMI",title="Season")
+plot_ordination(ave_dta,temp_ord,type="samples",color="Season",title="Season")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Sex)
 plot_ordination(ave_dta,temp_ord,type="samples",color="Sex",title="Sex")
