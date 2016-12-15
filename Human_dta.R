@@ -329,19 +329,16 @@ temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Race)
 plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Race")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Manner.of.Death)
-plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Manner.of.Death")
+plot_ordination(ave_dta,temp_ord,type="samples",color="Manner.of.Death",title="Manner.of.Death")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Season)
 plot_ordination(ave_dta,temp_ord,type="samples",color="Estimated_PMI",title="Season")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Sex)
-plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Sex")
+plot_ordination(ave_dta,temp_ord,type="samples",color="Sex",title="Sex")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Weight_Status)
-plot_ordination(ave_dta,temp_ord,type="samples",color="Estimated_PMI",title="Weight_Status")
-
-temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Weight_Status)
-plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Weight_Status")
+plot_ordination(ave_dta,temp_ord,type="samples",color="Weight_Status",title="Weight_Status")
 
 temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~BMI,na.action=na.omit)
 p1=plot_ordination(ave_dta,temp_ord,type="samples",title="BMI")
