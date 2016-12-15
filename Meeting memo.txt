@@ -1,0 +1,13 @@
+# Dec 15, 2016 
+
+Family level summary
+
+OTU level:
+Manner of Death
+Race
+Season
+BMI
+Gender
+
+Prediction:PMI, MoD(regression:multinomial regression: all main effects, all two way interactions, mean and se)
+
