@@ -4,6 +4,7 @@ biocLite('phyloseq')
 
 # Loading package: reference: https://joey711.github.io/phyloseq/install.html
 library(phyloseq)
+library(vegan)
 
 # Set directory
 setwd("/Users/Le/Google Drive/Research/Human Remain Data")
@@ -111,6 +112,8 @@ for (i in body){
 	
 }
 
+rarecurve(round(t(as.matrix(sum_otu))))
+
 zero_count<-data.frame(Pack_ID=body,count=rep(NA, length(body)))
 row.names(zero_count)<-body
 for (i in body){
@@ -191,3 +194,161 @@ sample_data(dta)
 #Use the tax_table() function to access the taxaonomy
 tax_table(dta)
 
+
+
+
+
+
+
+#####################################################
+# Standarized data for diversity
+
+# Loading package: reference: https://joey711.github.io/phyloseq/install.html
+library(phyloseq)
+library(vegan)
+
+# Set directory
+setwd("/Users/Le/Google Drive/Research/Human Remain Data")
+
+# Load in the std data
+std_dta<-import_biom("HPMM_TAMU_Collab/f120_r1k.biom")
+
+# Reconsturct the OTU file by taking the average OTU of each body over sample_area
+std_meta_dta<-data.frame(sample_data(std_dta))
+std_otu_dta<-data.frame(otu_table(std_dta))
+std_taxa_dta<-data.frame(tax_table(std_dta))
+
+## Average all otu table
+ave_otu_dta<-matrix(NA,nrow=dim(std_otu_dta)[1],ncol=length(unique(std_meta_dta$Pack_ID)))
+row.names(ave_otu_dta)<-rownames(std_otu_dta)
+colnames(ave_otu_dta)<-unique(std_meta_dta$Pack_ID)
+for (i in unique(std_meta_dta$Pack_ID)){
+	print(i)
+	temp_id<-rownames(std_meta_dta[std_meta_dta$Pack_ID%in%i,])
+	ave_otu_dta[,i]<-rowMeans(std_otu_dta[,temp_id])
+}
+
+## Adjust the meta data
+ave_meta_dta<-std_meta_dta[!duplicated(std_meta_dta$Pack_ID),]
+row.names(ave_meta_dta)<-ave_meta_dta$Pack_ID
+ave_meta_dta$BMI<-as.numeric(ave_meta_dta$BMI)
+ave_meta_dta$Age<-as.numeric(ave_meta_dta$Age)
+
+## Adjust the taxa data
+ave_taxa_dta<-data.frame(matrix(NA, nrow=dim(std_taxa_dta)[1],ncol=dim(std_taxa_dta)[2]))
+colnames(ave_taxa_dta)<-c("Kingdom","Phylum","Class","Order","Family","Genus","Speices")
+row.names(ave_taxa_dta)<-rownames(std_taxa_dta)
+ave_taxa_dta$Kingdom<-gsub("k__","",std_taxa_dta$Rank1)
+ave_taxa_dta$Phylum<-gsub("p__","",std_taxa_dta$Rank2)
+ave_taxa_dta$Class<-gsub("c__","",std_taxa_dta$Rank3)
+ave_taxa_dta$Order<-gsub("o__","",std_taxa_dta$Rank4)
+ave_taxa_dta$Family<-gsub("f__","",std_taxa_dta$Rank5)
+ave_taxa_dta$Genus<-gsub("g__","",std_taxa_dta$Rank6)
+ave_taxa_dta$Speices<-gsub("s__","",std_taxa_dta$Rank7)
+
+## Combine into a phyloseq format
+ave_dta<-phyloseq(
+	otu_table(round(as.matrix(ave_otu_dta)),taxa_are_rows=T),
+	tax_table(as.matrix(ave_taxa_dta)),
+	sample_data(ave_meta_dta)
+	)
+# rm 0 count otu
+ave_dta_clean<-filter_taxa(ave_dta,function(x) sum(x)>0,T)
+
+# Rarefication curve on OTU
+rarecurve(t(round(as.matrix(otu_table(ave_dta)))))
+
+# alpha diversity
+alpha_temp<-data.frame(estimate_richness(ave_dta,measures=c("Simpson","Shannon")))
+alpha_diversity<-data.frame(alpha_temp,Pack_ID=rownames(alpha_temp))
+alpha_data<-merge(ave_meta_dta,alpha_diversity,by="Pack_ID")
+alpha_data$BMI<-as.numeric(alpha_data$BMI)
+alpha_data$Age<-as.numeric(alpha_data$Age)
+
+# Plot alpha diversity by univariate
+plotting_factors<-(c("Estimated_PMI","Race","Manner.of.Death","Season","Sex","Weight_Status","Event_Location"))
+pdf("Alpha_diversity.pdf",width=24,height=6)
+for(i in plotting_factors){
+	par(mfrow=c(1,2))
+	boxplot(alpha_data$Simpson~alpha_data[,i],main=paste(i,"with","Simpson"))
+	boxplot(alpha_data$Shannon~alpha_data[,i],main=paste(i,"with","Shannon"))
+	
+}
+
+par(mfrow=c(1,2))
+plot(Simpson~BMI, data=alpha_data)
+plot(Shannon~BMI, data=alpha_data)
+
+par(mfrow=c(1,2))
+plot(Simpson~Age, data=alpha_data)
+plot(Shannon~Age, data=alpha_data)
+dev.off()
+
+# Plot bivariate alpha
+
+pdf("Bivariate_alpha.pdf")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Estimated_PMI",color="Race")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Estimated_PMI",color="Manner.of.Death")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Estimated_PMI",color="Season")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Estimated_PMI",color="Sex")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Estimated_PMI",color="Weight_Status")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Estimated_PMI",color="Event_Location")
+
+
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Race",color="Manner.of.Death")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Race",color="Season")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Race",color="Sex")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Race",color="Weight_Status")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Race",color="Event_Location")
+
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Manner.of.Death",color="Season")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Manner.of.Death",color="Sex")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Manner.of.Death",color="Weight_Status")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Manner.of.Death",color="Event_Location")
+
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Season",color="Sex")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Season",color="Weight_Status")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Season",color="Event_Location")
+
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Sex",color="Weight_Status")
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Sex",color="Event_Location")
+
+plot_richness(ave_dta,measures=c("Simpson","Shannon"),x="Weight_Status",color="Event_Location")
+
+dev.off()
+
+
+# Plotting beta diversity
+
+
+pdf("beta_CAP.pdf")
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Estimated_PMI)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Estimated_PMI",title="Estimated_PMI")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Race)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Race")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Manner.of.Death)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Manner.of.Death")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Season)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Estimated_PMI",title="Season")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Sex)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Sex")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Weight_Status)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Estimated_PMI",title="Weight_Status")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Weight_Status)
+plot_ordination(ave_dta,temp_ord,type="samples",color="Race",title="Weight_Status")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~BMI,na.action=na.omit)
+p1=plot_ordination(ave_dta,temp_ord,type="samples",title="BMI")
+p1+geom_point(aes(colour=BMI))+scale_colour_gradient(low="red",high="blue")
+
+temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Age,na.action=na.omit)
+p1=plot_ordination(ave_dta,temp_ord,type="samples",title="Age")
+p1+geom_point(aes(colour=Age))+scale_colour_gradient(low="red",high="blue")
+
+dev.off()
