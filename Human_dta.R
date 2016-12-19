@@ -2,6 +2,9 @@
 source('http://bioconductor.org/biocLite.R')
 biocLite('phyloseq')
 
+#####################################################
+# Initial exploration
+
 # Loading package: reference: https://joey711.github.io/phyloseq/install.html
 library(phyloseq)
 library(vegan)
@@ -211,7 +214,7 @@ library(vegan)
 setwd("/Users/Le/Google Drive/Research/Human Remain Data")
 
 # Load in the std data
-std_dta<-import_biom("HPMM_TAMU_Collab/f120_r1k.biom")
+std_dta<-import_biom("/Users/Le/Google Drive/Research/Human Remain Data/HPMM_TAMU_Collab/f120_r1k.biom")
 
 # Reconsturct the OTU file by taking the average OTU of each body over sample_area
 std_meta_dta<-data.frame(sample_data(std_dta))
@@ -349,3 +352,36 @@ p1=plot_ordination(ave_dta,temp_ord,type="samples",title="Age")
 p1+geom_point(aes(colour=Age))+scale_colour_gradient(low="red",high="blue")
 
 dev.off()
+
+
+
+#####################################################
+# Standarized data for hypothesis testing, Dec 18, 2016
+# Le
+
+# load-in library
+library(phyloseq)
+library(vegan)
+library(DESeq2)
+
+# Use data from previous steps
+setwd("/Users/Le/Google Drive/Research/Human Remain Data")
+ave_dta_clean
+
+
+
+# DESeq2 testing preparation
+meta_testing<-subset(data.frame(sample_data(ave_dta_clean)),select=c("Estimated_PMI","Race","Manner.of.Death","Season","Sex","Weight_Status","Event_Location","BMI","Age"))
+meta_testing$Estimated_PMI<-factor(meta_testing$Estimated_PMI,levels=c("12","<24",">24",">48",">72"),ordered=T)
+meta_testing$Race<-factor(meta_testing$Race)
+meta_testing$Manner.of.Death<-factor(meta_testing$Manner.of.Death,levels=c("Natural","Accident","Suicide","Homicide",ordered=T))
+meta_testing$Season<-factor(meta_testing$Season,levels=c("Spring","Summer","Autumn","Winter"),ordered=T)
+meta_testing$Sex<-factor(meta_testing$Sex)
+meta_testing$Weight_Status<-factor(meta_testing$Weight_Status,levels=c("Underweight","Normal Weight","Overweight","Obese","Severe Obesity","Morbid Obesity","Super Obese"))
+meta_testing$Event_Location<-factor(meta_testing$Event_Location)
+
+
+data_testing<-data.frame(otu_table(ave_dta_clean))
+colnames(data_testing)<-gsub("X2","2",colnames(data_testing))
+colnames(data_testing)<-gsub("[.]","-",colnames(data_testing))
+

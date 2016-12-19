@@ -11,3 +11,5 @@ Gender
 
 Prediction:PMI, MoD(regression:multinomial regression: all main effects, all two way interactions, mean and se)
 
+Deseq: p-value hist
+
