@@ -369,8 +369,6 @@ setwd("/Users/Le/Google Drive/Research/Human Remain Data")
 ave_dta_clean
 
 
-
-# DESeq2 testing preparation
 meta_testing<-subset(data.frame(sample_data(ave_dta_clean)),select=c("Estimated_PMI","Race","Manner.of.Death","Season","Sex","Weight_Status","Event_Location","BMI","Age"))
 meta_testing$Estimated_PMI<-factor(meta_testing$Estimated_PMI,levels=c("12","<24",">24",">48",">72"),ordered=T)
 meta_testing$Race<-factor(meta_testing$Race)
@@ -384,4 +382,52 @@ meta_testing$Event_Location<-factor(meta_testing$Event_Location)
 data_testing<-data.frame(otu_table(ave_dta_clean))
 colnames(data_testing)<-gsub("X2","2",colnames(data_testing))
 colnames(data_testing)<-gsub("[.]","-",colnames(data_testing))
+
+fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age), data=meta_testing)
+
+########### Univariate PerMANOVA
+# PMI
+fit_PMI<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI), data=meta_testing)
+fit_PMI
+# Race
+fit_Race<-adonis2(t(as.matrix(data_testing))~(Race), data=meta_testing)
+fit_Race
+# MoD
+fit_MoD<-adonis2(t(as.matrix(data_testing))~(Manner.of.Death), data=meta_testing)
+fit_MoD
+# Season
+fit_Season<-adonis2(t(as.matrix(data_testing))~(Season), data=meta_testing)
+fit_Season
+# Sex
+fit_Sex<-adonis2(t(as.matrix(data_testing))~(Sex), data=meta_testing)
+fit_Sex
+# Event_Location
+fit_location<-adonis2(t(as.matrix(data_testing))~(Event_Location), data=meta_testing)
+fit_location
+# Age
+fit_Age<-adonis2(t(as.matrix(data_testing))~(Age),data=meta_testing)
+fit_Age
+
+#### Weight data NA removed
+meta_weight<-meta_testing[!is.na(meta_testing$BMI),]
+data_weight<-data_testing[,rownames(meta_weight)]
+
+# BMI
+fit_BMI<-adonis2(t(as.matrix(data_weight))~(BMI), data=meta_weight)
+fit_BMI
+# Weight_Status
+fit_weight<-adonis2(t(as.matrix(data_weight))~(Weight_Status), data=meta_weight)
+fit_weight
+
+
+
+#### Without 5NA data
+fit_1_way<-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status),data=meta_weight)
+fit_1_way
+
+
+# Backward model selection
+adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status)^2,data=meta_weight)
+adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Race:BMI+Age:BMI+Age:Weight_Status),data=meta_weight)									
+adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Age:Weight_Status),data=meta_weight)
 
