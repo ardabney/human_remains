@@ -1,0 +1,187 @@
+a<-c(26.99,15.99,29.99,149.69,22.5,26.59,47.86)
+sum(a)
+required_packages <- c("devtools", "data.table", "reshape2", "dplyr")#
+install.packages(required_packages)
+devtools::install_github("pachterlab/kma")
+library("kma")
+system.file("example", package="kma")
+example
+base_dir <- system.file("example", package="kma")#
+xprs_fnames <- Sys.glob(file.path(base_dir, "experiment/*/*/xprs_out/results.xprs"))#
+xprs_fnames
+sample_names <- sub(file.path(base_dir, "experiment/[a-z]+/"), "", xprs_fnames) %>%#
+    sub("xprs_out/results.xprs", "", .) %>%#
+    gsub("/", "", .)#
+sample_names
+condition_names <- sub("[0-9]+", "", sample_names)#
+condition_names
+xprs_fnames
+xprs <- read_express(xprs_fnames, sample_names, condition_names)
+xprs
+names(xprs)
+intron_to_trans <- data.table::fread(file.path(base_dir, "kma_pre-process_out",#
+    "intron_to_transcripts.txt"), data.table = FALSE)#
+head(intron_to_trans)
+newIntronRetention
+ir <- newIntronRetention(xprs$tpm, intron_to_trans, xprs$condition,#
+    xprs$uniq_counts)
+print(ir)
+head(ir$flat)
+retention_test
+?p.adjust
+intron_null_dist
+source("https://bioconductor.org/biocLite.R")#
+biocLite("spliceR")
+browseVignettes("spliceR")
+n<-rgamma(100,1,2)
+hist(n)
+n<-rgamma(100,1,2)
+n<-rbeta(100,1,3)
+hist(n)
+n<-rbeta(100,1,30)
+hist(n)
+# Simulation of p-value hist#
+pike<-rbeta(1000,1,100)#
+noise<-rbeta(1000,1,1)#
+#
+raw_p<-c(pike,noise)#
+#
+fdr<-(raw_p,"BH")#
+#
+plot(sort(fdr),1:length(fdr))
+# Simulation of p-value hist#
+pike<-rbeta(1000,1,100)#
+noise<-rbeta(1000,1,1)#
+#
+raw_p<-c(pike,noise)#
+#
+fdr<-p.adjust(raw_p,"BH")#
+#
+plot(sort(fdr),1:length(fdr))
+# Simulation of p-value hist#
+pike<-rbeta(1000,1,100)#
+noise<-rbeta(1000,1,1)#
+#
+raw_p<-c(pike,noise)#
+#
+fdr<-p.adjust(raw_p,"BH")#
+#
+plot(1:length(fdr),sort(fdr))
+# Simulation of p-value hist#
+pike<-rbeta(1000,1,100)#
+noise<-rbeta(10000,1,1)#
+#
+raw_p<-c(pike,noise)#
+#
+fdr<-p.adjust(raw_p,"BH")#
+#
+plot(1:length(fdr),sort(fdr))
+setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+library(phyloseq)#
+library(vegan)#
+#
+# Set directory#
+setwd("/Users/Le/Google Drive/Research/Human Remain Data")#
+#
+# Load in the std data#
+std_dta<-import_biom("/Users/Le/Google Drive/Research/Human Remain Data/HPMM_TAMU_Collab/f120_r1k.biom")#
+#
+# Reconsturct the OTU file by taking the average OTU of each body over sample_area#
+std_meta_dta<-data.frame(sample_data(std_dta))#
+std_otu_dta<-data.frame(otu_table(std_dta))#
+std_taxa_dta<-data.frame(tax_table(std_dta))#
+#
+## Average all otu table#
+ave_otu_dta<-matrix(NA,nrow=dim(std_otu_dta)[1],ncol=length(unique(std_meta_dta$Pack_ID)))#
+row.names(ave_otu_dta)<-rownames(std_otu_dta)#
+colnames(ave_otu_dta)<-unique(std_meta_dta$Pack_ID)#
+for (i in unique(std_meta_dta$Pack_ID)){#
+	print(i)#
+	temp_id<-rownames(std_meta_dta[std_meta_dta$Pack_ID%in%i,])#
+	ave_otu_dta[,i]<-rowMeans(std_otu_dta[,temp_id])#
+}#
+#
+## Adjust the meta data#
+ave_meta_dta<-std_meta_dta[!duplicated(std_meta_dta$Pack_ID),]#
+row.names(ave_meta_dta)<-ave_meta_dta$Pack_ID#
+ave_meta_dta$BMI<-as.numeric(ave_meta_dta$BMI)#
+ave_meta_dta$Age<-as.numeric(ave_meta_dta$Age)#
+#
+## Adjust the taxa data#
+ave_taxa_dta<-data.frame(matrix(NA, nrow=dim(std_taxa_dta)[1],ncol=dim(std_taxa_dta)[2]))#
+colnames(ave_taxa_dta)<-c("Kingdom","Phylum","Class","Order","Family","Genus","Speices")#
+row.names(ave_taxa_dta)<-rownames(std_taxa_dta)#
+ave_taxa_dta$Kingdom<-gsub("k__","",std_taxa_dta$Rank1)#
+ave_taxa_dta$Phylum<-gsub("p__","",std_taxa_dta$Rank2)#
+ave_taxa_dta$Class<-gsub("c__","",std_taxa_dta$Rank3)#
+ave_taxa_dta$Order<-gsub("o__","",std_taxa_dta$Rank4)#
+ave_taxa_dta$Family<-gsub("f__","",std_taxa_dta$Rank5)#
+ave_taxa_dta$Genus<-gsub("g__","",std_taxa_dta$Rank6)#
+ave_taxa_dta$Speices<-gsub("s__","",std_taxa_dta$Rank7)#
+#
+## Combine into a phyloseq format#
+ave_dta<-phyloseq(#
+	otu_table(round(as.matrix(ave_otu_dta)),taxa_are_rows=T),#
+	tax_table(as.matrix(ave_taxa_dta)),#
+	sample_data(ave_meta_dta)#
+	)#
+# rm 0 count otu#
+ave_dta_clean<-filter_taxa(ave_dta,function(x) sum(x)>0,T)
+setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+library(phyloseq)#
+library(vegan)#
+library(DESeq2)
+setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+meta_testing<-subset(data.frame(sample_data(ave_dta_clean)),select=c("Estimated_PMI","Race","Manner.of.Death","Season","Sex","Weight_Status","Event_Location","BMI","Age"))#
+meta_testing$Estimated_PMI<-factor(meta_testing$Estimated_PMI,levels=c("12","<24",">24",">48",">72"),ordered=T)#
+meta_testing$Race<-factor(meta_testing$Race)#
+meta_testing$Manner.of.Death<-factor(meta_testing$Manner.of.Death,levels=c("Natural","Accident","Suicide","Homicide",ordered=T))#
+meta_testing$Season<-factor(meta_testing$Season,levels=c("Spring","Summer","Autumn","Winter"),ordered=T)#
+meta_testing$Sex<-factor(meta_testing$Sex)#
+meta_testing$Weight_Status<-factor(meta_testing$Weight_Status,levels=c("Underweight","Normal Weight","Overweight","Obese","Severe Obesity","Morbid Obesity","Super Obese"))#
+meta_testing$Event_Location<-factor(meta_testing$Event_Location)#
+data_testing<-data.frame(otu_table(ave_dta_clean))#
+colnames(data_testing)<-gsub("X2","2",colnames(data_testing))#
+colnames(data_testing)<-gsub("[.]","-",colnames(data_testing))#
+#
+fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age), data=meta_testing)#
+#
+########### Univariate PerMANOVA#
+# PMI#
+fit_PMI<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI), data=meta_testing)#
+fit_PMI#
+# Race#
+fit_Race<-adonis2(t(as.matrix(data_testing))~(Race), data=meta_testing)#
+fit_Race#
+# MoD#
+fit_MoD<-adonis2(t(as.matrix(data_testing))~(Manner.of.Death), data=meta_testing)#
+fit_MoD#
+# Season#
+fit_Season<-adonis2(t(as.matrix(data_testing))~(Season), data=meta_testing)#
+fit_Season#
+# Sex#
+fit_Sex<-adonis2(t(as.matrix(data_testing))~(Sex), data=meta_testing)#
+fit_Sex#
+# Event_Location#
+fit_location<-adonis2(t(as.matrix(data_testing))~(Event_Location), data=meta_testing)#
+fit_location#
+# Age#
+fit_Age<-adonis2(t(as.matrix(data_testing))~(Age),data=meta_testing)#
+fit_Age#
+#
+#### Weight data NA removed#
+meta_weight<-meta_testing[!is.na(meta_testing$BMI),]#
+data_weight<-data_testing[,rownames(meta_weight)]#
+#
+# BMI#
+fit_BMI<-adonis2(t(as.matrix(data_weight))~(BMI), data=meta_weight)#
+fit_BMI#
+# Weight_Status#
+fit_weight<-adonis2(t(as.matrix(data_weight))~(Weight_Status), data=meta_weight)#
+fit_weight
+library(glmnet)
+dim(data_testing)
+setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+library(nnet)
+help(package=nnet)
+help(package=glmnet)
