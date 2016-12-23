@@ -79,10 +79,14 @@ plot(1:length(fdr),sort(fdr))
 setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
 library(phyloseq)#
 library(vegan)#
-library(DESeq2)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-std_dta<-import_biom("/Users/Le/Google Drive/Research/Human Remain Data/HPMM_TAMU_Collab/f120_r1k.biom")
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+#
+# Set directory#
+setwd("/Users/Le/Google Drive/Research/Human Remain Data")#
+#
+# Load in the std data#
+std_dta<-import_biom("/Users/Le/Google Drive/Research/Human Remain Data/HPMM_TAMU_Collab/f120_r1k.biom")#
+#
+# Reconsturct the OTU file by taking the average OTU of each body over sample_area#
 std_meta_dta<-data.frame(sample_data(std_dta))#
 std_otu_dta<-data.frame(otu_table(std_dta))#
 std_taxa_dta<-data.frame(tax_table(std_dta))#
@@ -124,6 +128,10 @@ ave_dta<-phyloseq(#
 # rm 0 count otu#
 ave_dta_clean<-filter_taxa(ave_dta,function(x) sum(x)>0,T)
 setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+library(phyloseq)#
+library(vegan)#
+library(DESeq2)
+setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
 meta_testing<-subset(data.frame(sample_data(ave_dta_clean)),select=c("Estimated_PMI","Race","Manner.of.Death","Season","Sex","Weight_Status","Event_Location","BMI","Age"))#
 meta_testing$Estimated_PMI<-factor(meta_testing$Estimated_PMI,levels=c("12","<24",">24",">48",">72"),ordered=T)#
 meta_testing$Race<-factor(meta_testing$Race)#
@@ -131,232 +139,49 @@ meta_testing$Manner.of.Death<-factor(meta_testing$Manner.of.Death,levels=c("Natu
 meta_testing$Season<-factor(meta_testing$Season,levels=c("Spring","Summer","Autumn","Winter"),ordered=T)#
 meta_testing$Sex<-factor(meta_testing$Sex)#
 meta_testing$Weight_Status<-factor(meta_testing$Weight_Status,levels=c("Underweight","Normal Weight","Overweight","Obese","Severe Obesity","Morbid Obesity","Super Obese"))#
-meta_testing$Event_Location<-factor(meta_testing$Event_Location)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+meta_testing$Event_Location<-factor(meta_testing$Event_Location)#
 data_testing<-data.frame(otu_table(ave_dta_clean))#
 colnames(data_testing)<-gsub("X2","2",colnames(data_testing))#
-colnames(data_testing)<-gsub("[.]","-",colnames(data_testing))
-?adnois
-?adonis
-data(dune)
-dune
-data(dune.env)
-dune.evn
-dune.env
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(as.matrix(data_testing)~.*., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(as.matrix(data_testing)~., data=meta_testing)
-dim(meta_testing)
-dim(data_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~., data=meta_testing)
-dim(t(as.matrix(data_testing)))
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~Race, data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~Estimated_PMI, data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~Manner.of.Death, data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis(t(as.matrix(data_testing))~., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis(t(as.matrix(data_testing))~.*., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death)^2., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age)^2., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age)^2., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Event_Location+BMI+Age)^2., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age)., data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age), data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age)^2, data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+colnames(data_testing)<-gsub("[.]","-",colnames(data_testing))#
+#
+fit<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Season+Sex+Weight_Status+Event_Location+BMI+Age), data=meta_testing)#
+#
 ########### Univariate PerMANOVA#
 # PMI#
 fit_PMI<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI), data=meta_testing)#
 fit_PMI#
-#
 # Race#
 fit_Race<-adonis2(t(as.matrix(data_testing))~(Race), data=meta_testing)#
 fit_Race#
-#
 # MoD#
 fit_MoD<-adonis2(t(as.matrix(data_testing))~(Manner.of.Death), data=meta_testing)#
 fit_MoD#
-#
 # Season#
 fit_Season<-adonis2(t(as.matrix(data_testing))~(Season), data=meta_testing)#
 fit_Season#
-#
 # Sex#
 fit_Sex<-adonis2(t(as.matrix(data_testing))~(Sex), data=meta_testing)#
 fit_Sex#
-#
-# Weight_Status#
-fit_weight<-adonis2(t(as.matrix(data_testing))~(Weight_Status), data=meta_testing)#
-fit_weight#
-#
 # Event_Location#
 fit_location<-adonis2(t(as.matrix(data_testing))~(Event_Location), data=meta_testing)#
-#
-# BMI#
-fit_BMI<-adonis2(t(as.matrix(data_testing))~(BMI), data=meta_testing)#
-fit_BMI#
-#
+fit_location#
 # Age#
 fit_Age<-adonis2(t(as.matrix(data_testing))~(Age),data=meta_testing)#
-fit_Age
-?adonis
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_BMI<-adonis2(t(as.matrix(data_testing))~(BMI), data=meta_testing, na.action=na.omit)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_PMI
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Race
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_MoD
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Season
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Sex
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
+fit_Age#
+#
+#### Weight data NA removed#
+meta_weight<-meta_testing[!is.na(meta_testing$BMI),]#
+data_weight<-data_testing[,rownames(meta_weight)]#
+#
+# BMI#
+fit_BMI<-adonis2(t(as.matrix(data_weight))~(BMI), data=meta_weight)#
+fit_BMI#
+# Weight_Status#
+fit_weight<-adonis2(t(as.matrix(data_weight))~(Weight_Status), data=meta_weight)#
 fit_weight
+library(glmnet)
+dim(data_testing)
 setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_weight<-adonis2(t(as.matrix(data_testing))~(Weight_Status), data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Age
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_location
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_location<-adonis2(t(as.matrix(data_testing))~(Event_Location*Manner.of.Death), data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_location
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-meta_weight<-meta_testing[!is.na(meta_testing$BMI),]
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-meta_weight
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-data_weight<-data_testing[,rownames(meta_weight)]
-dim(data_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_BMI<-adonis2(t(as.matrix(data_weight))~(BMI), data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_BMI
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_weight<-adonis2(t(as.matrix(data_weight))~(Weight_Status), data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_weight
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Season)#
-plot_ordination(ave_dta,temp_ord,type="samples",color="Season",title="Season")
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-temp_ord<-ordinate(ave_dta,method="CAP",distance="bray",formula=~Sex)#
-plot_ordination(ave_dta,temp_ord,type="samples",color="Sex",title="Sex")
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_PMI
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Race
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_MoD
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Season
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Sex
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_location
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_location<-adonis2(t(as.matrix(data_testing))~(Event_Location), data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_location
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_Age
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_BMI
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_weight
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~Estimated_PMI*Race*Manner.of.Death*Age,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age)^2,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death)^2,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death)^2,data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age)^2,data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age)^3,data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age)^2,data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age)^3,data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status)^2,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_1_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age)^1,data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_1_way<-adonis2(t(as.matrix(data_testing))~(Estimated_PMI+Race+Manner.of.Death+Age),data=meta_testing)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_1_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_1_way<-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_1_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Weight_Status),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way<-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Weight_Status)^2,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Manner.of.Death),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death)^2,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-fit_2_way
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status)^3,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status)^2,data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+#
-									Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Race:BMI+Age:BMI),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+#
-									Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Race:BMI+Age:BMI+Age:Weight_Status),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Age:Weight_Status),data=meta_weight)
-setwd('/Users/Le/Google Drive/Research/Human Remain Data/human_remains')
-adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+Weight_Status+Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:Weight_Status+Age:Weight_Status),data=meta_weight)
+library(nnet)
+help(package=nnet)
+help(package=glmnet)

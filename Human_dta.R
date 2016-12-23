@@ -364,6 +364,7 @@ library(phyloseq)
 library(vegan)
 library(DESeq2)
 
+
 # Use data from previous steps
 setwd("/Users/Le/Google Drive/Research/Human Remain Data")
 ave_dta_clean
@@ -431,3 +432,30 @@ adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+We
 adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Race:BMI+Age:BMI+Age:Weight_Status),data=meta_weight)									
 adonis2(t(as.matrix(data_weight))~(Estimated_PMI+Race+Manner.of.Death+Age+BMI+Weight_Status+Estimated_PMI:Race+Estimated_PMI:Manner.of.Death+Estimated_PMI:Age+Estimated_PMI:BMI+Estimated_PMI:Weight_Status+Age:Weight_Status),data=meta_weight)
 
+
+################## Lasso MGLM regression
+library(glmnet)
+
+
+temp<-data.frame(subset(meta_weight,select=c("Race","Age","Sex","BMI","Weight_Status")),t(data_weight))
+X.Mat<-model.matrix(~(Race+Age+Sex+BMI+Weight_Status+Weight_Status*Age)+.,data=temp)
+
+
+Y.PMI<-droplevels(meta_weight$Estimated_PMI)
+Y.MoD<-droplevels(meta_weight$Manner.of.Death)
+
+
+# PMI
+PMI_lambda<-cv.glmnet(x=X.Mat,y=Y.PMI,family="multinomial",penalty.factor=c(rep(0,11),rep(1,922),rep(0,6)),type="class")
+temp_coef<-(coef(PMI_lambda,s="lambda.min"))
+coef_PMI<-cbind(temp_coef$"<24"[,1],temp_coef$">24"[,1],temp_coef$">48"[,1],temp_coef$">72"[,1])
+# write.csv(coef_PMI,"PMI_predictor.csv")
+PMI_l24<-grep("denovo*",rownames(coef_PMI[coef_PMI[,1]!=0,]),value=T)
+PMI_g24<-grep("denovo*",rownames(coef_PMI[coef_PMI[,2]!=0,]),value=T)
+PMI_g48<-grep("denovo*",rownames(coef_PMI[coef_PMI[,3]!=0,]),value=T)
+PMI_g72<-grep("denovo*",rownames(coef_PMI[coef_PMI[,4]!=0,]),value=T)
+
+
+
+# MoD
+MoD_lambda<-glmnet(x=X.Mat,y=Y.MoD,family="multinomial",penalty.factor=c(rep(0,11),rep(1,922),rep(0,6)),type="class")
