@@ -438,7 +438,7 @@ library(glmnet)
 
 
 temp<-data.frame(subset(meta_weight,select=c("Race","Age","Sex","BMI","Weight_Status")),t(data_weight))
-X.Mat<-model.matrix(~(Race+Age+Sex+BMI+Weight_Status+Weight_Status*Age)+.,data=temp)
+X.Mat<-model.matrix(~-1+(Race+Age+Sex+BMI+Weight_Status+Weight_Status*Age)+.,data=temp)
 
 
 Y.PMI<-droplevels(meta_weight$Estimated_PMI)
@@ -458,4 +458,205 @@ PMI_g72<-grep("denovo*",rownames(coef_PMI[coef_PMI[,4]!=0,]),value=T)
 
 
 # MoD
-MoD_lambda<-glmnet(x=X.Mat,y=Y.MoD,family="multinomial",penalty.factor=c(rep(0,11),rep(1,922),rep(0,6)),type="class")
+MoD_lambda<-cv.glmnet(x=X.Mat,y=Y.MoD,family="multinomial",penalty.factor=c(rep(0,11),rep(1,922),rep(0,6)),type="class")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################
+########################################### OTU by OTU testing
+library(DESeq2)
+library(vegan)
+library(phyloseq)
+library(glmnet)
+library(nnet)
+
+std_dta<-import_biom("/Users/Le/Google Drive/Research/Human Remain Data/HPMM_TAMU_Collab/f120_r1k.biom")
+
+# Reconsturct the OTU file by taking the average OTU of each body over sample_area
+std_meta_dta<-data.frame(sample_data(std_dta))
+std_otu_dta<-data.frame(otu_table(std_dta))
+std_taxa_dta<-data.frame(tax_table(std_dta))
+
+## Average all otu table
+ave_otu_dta<-matrix(NA,nrow=dim(std_otu_dta)[1],ncol=length(unique(std_meta_dta$Pack_ID)))
+row.names(ave_otu_dta)<-rownames(std_otu_dta)
+colnames(ave_otu_dta)<-unique(std_meta_dta$Pack_ID)
+for (i in unique(std_meta_dta$Pack_ID)){
+	print(i)
+	temp_id<-rownames(std_meta_dta[std_meta_dta$Pack_ID%in%i,])
+	ave_otu_dta[,i]<-rowMeans(std_otu_dta[,temp_id])
+}
+
+## Adjust the meta data
+ave_meta_dta<-std_meta_dta[!duplicated(std_meta_dta$Pack_ID),]
+row.names(ave_meta_dta)<-ave_meta_dta$Pack_ID
+ave_meta_dta$BMI<-as.numeric(ave_meta_dta$BMI)
+ave_meta_dta$Age<-as.numeric(ave_meta_dta$Age)
+
+## Adjust the taxa data
+ave_taxa_dta<-data.frame(matrix(NA, nrow=dim(std_taxa_dta)[1],ncol=dim(std_taxa_dta)[2]))
+colnames(ave_taxa_dta)<-c("Kingdom","Phylum","Class","Order","Family","Genus","Speices")
+row.names(ave_taxa_dta)<-rownames(std_taxa_dta)
+ave_taxa_dta$Kingdom<-gsub("k__","",std_taxa_dta$Rank1)
+ave_taxa_dta$Phylum<-gsub("p__","",std_taxa_dta$Rank2)
+ave_taxa_dta$Class<-gsub("c__","",std_taxa_dta$Rank3)
+ave_taxa_dta$Order<-gsub("o__","",std_taxa_dta$Rank4)
+ave_taxa_dta$Family<-gsub("f__","",std_taxa_dta$Rank5)
+ave_taxa_dta$Genus<-gsub("g__","",std_taxa_dta$Rank6)
+ave_taxa_dta$Speices<-gsub("s__","",std_taxa_dta$Rank7)
+
+## Combine into a phyloseq format
+ave_dta<-phyloseq(
+	otu_table(round(as.matrix(ave_otu_dta)),taxa_are_rows=T),
+	tax_table(as.matrix(ave_taxa_dta)),
+	sample_data(ave_meta_dta)
+	)
+# rm 0 count otu
+ave_dta_clean<-filter_taxa(ave_dta,function(x) sum(x)>0,T)
+
+
+meta_testing<-subset(data.frame(sample_data(ave_dta_clean)),select=c("Estimated_PMI","Race","Manner.of.Death","Season","Sex","Weight_Status","Event_Location","BMI","Age"))
+meta_testing$Estimated_PMI<-factor(meta_testing$Estimated_PMI,levels=c("12","<24",">24",">48",">72"),ordered=F)
+meta_testing$Race<-factor(meta_testing$Race)
+meta_testing$Manner.of.Death<-factor(meta_testing$Manner.of.Death,levels=c("Natural","Accident","Suicide","Homicide",ordered=F))
+meta_testing$Season<-factor(meta_testing$Season,levels=c("Spring","Summer","Autumn","Winter"),ordered=F)
+meta_testing$Sex<-factor(meta_testing$Sex)
+meta_testing$Weight_Status<-factor(meta_testing$Weight_Status,levels=c("Underweight","Normal Weight","Overweight","Obese","Severe Obesity","Morbid Obesity","Super Obese"))
+meta_testing$Event_Location<-factor(meta_testing$Event_Location)
+
+
+data_testing<-data.frame(otu_table(ave_dta_clean))
+colnames(data_testing)<-gsub("X2","2",colnames(data_testing))
+colnames(data_testing)<-gsub("[.]","-",colnames(data_testing))
+
+
+#### Weight data NA removed
+meta_weight<-droplevels(meta_testing[!is.na(meta_testing$BMI),])
+levels(meta_weight$Estimated_PMI)<-c("Less24","More24","More48","More72")
+data_weight<-as.matrix(data_testing[,rownames(meta_weight)])
+
+
+
+#### Split dataset
+set.seed(101)
+ID_train<-sample(1:115,round(115*0.6))
+data_weight_train_temp<-data_weight[,ID_train]
+data_weight_train<-data_weight_train_temp[rowSums(data_weight_train_temp)>=(dim(data_weight_train_temp)[2]),]
+meta_weight_train<-meta_weight[ID_train,]
+data_weight_test<-data_weight[,-ID_train]
+meta_weight_test<-meta_weight[-ID_train,]
+testing_set<-data.frame(meta_weight_test,t(data_weight_test))
+
+
+#### PERMANOVA for new data in PMI
+adonis2(t(as.matrix(data_weight_train))~Estimated_PMI*(Race+Season+Sex+Weight_Status+Event_Location+BMI+Age),data=meta_weight_train)
+adonis2(t(as.matrix(data_weight_train))~Estimated_PMI*(Race+Season+BMI+Sex)+Weight_Status+Event_Location+Age,data=meta_weight_train)
+adonis2(t(as.matrix(data_weight_train))~Estimated_PMI*(Race+Season+BMI)+Sex+Age,data=meta_weight_train)
+
+
+#### DESeq testing
+pdf("p_hist_PMI.pdf")
+par(mfrow=c(3,2))
+de_pmi<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Estimated_PMI)
+temp_pmi<-DESeq(de_pmi,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+padj_pmi<-subset(data.frame(results(temp_pmi)),select=padj)
+hist(results(temp_pmi)$pvalue,freq=F)
+
+de_age<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Age)
+temp_age<-DESeq(de_pmi,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+padj_age<-subset(data.frame(results(temp_age)),select=padj)
+hist(results(temp_age)$pvalue,freq=F)
+
+de_sex<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Sex)
+temp_sex<-DESeq(de_sex,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+padj_sex<-subset(data.frame(results(temp_sex)),select=padj)
+hist(results(temp_sex)$pvalue,freq=F)
+
+de_pmi_season<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Season)
+temp_pmi_season<-DESeq(de_pmi_season,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+padj_pmi_season<-subset(data.frame(results(temp_pmi_season)),select=padj)
+hist(results(temp_pmi_season)$pvalue,freq=F)
+
+de_pmi_bmi<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~BMI)
+temp_pmi_bmi<-DESeq(de_pmi_bmi,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+padj_pmi_bmi<-subset(data.frame(results(temp_pmi_bmi)),select=padj)
+hist(results(temp_pmi_bmi)$pvalue,freq=F)
+
+de_pmi_race<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Estimated_PMI*Race)
+temp_pmi_race<-DESeq(de_pmi_race,test="LRT",reduced=~Estimated_PMI,fitType="parametric",minReplicatesForReplace=Inf)
+padj_pmi_race<-subset(data.frame(results(temp_pmi_race)),select=padj)
+hist(results(temp_pmi_race)$pvalue,freq=F)
+
+dev.off()
+
+pmi_candidate_temp<-data.frame(padj_pmi,padj_age,padj_sex,padj_pmi_season,padj_pmi_bmi,padj_pmi_race)
+colnames(pmi_candidate_temp)<-c("PMI","AGE","SEX","SEASON","BMI","PMI_RACE")
+pmi_candidate<-cbind(pmi_candidate_temp,Min=apply(pmi_candidate_temp,1,mean))
+pmi_candidate<-pmi_candidate[order(pmi_candidate$Min),]
+
+
+pdf("selected_predictor_PMI.pdf")
+plot(sort(pmi_candidate$Min))
+
+abline(h=2.540394e-01,v=15)
+mtext("0.380",4,at=0.3801792)
+mtext("15",1,at=15)
+dev.off()
+
+candidate_otu<-rownames(pmi_candidate)[1:15]
+
+X_temp_pmi_otu<-t((data_weight_train[candidate_otu,]))
+X_temp_pmi<-data.frame(subset(meta_weight_train,select=c("Estimated_PMI","Age","Sex","Season","BMI")),X_temp_pmi_otu)
+
+
+fit_pmi_selected_otu<-multinom(Estimated_PMI~.,data=X_temp_pmi,maxit=10000)
+table(predict(fit_pmi_selected_otu,newdata=testing_set),testing_set$Estimated_PMI)
+
+
+#### LOO for PMI
+
+loo_pmi<-NULL
+for (i in 1:15){
+	otu_can<-rownames(pmi_candidate)[1:i]
+	X_temp<-cbind(subset(meta_weight_train,select=c("Estimated_PMI","Age","Sex","Season","BMI")),t((data_weight_train[otu_can,,drop=F])))
+	counter<-NULL
+	
+	for (l in 1:dim(X_temp)[1]){
+		data_temp<-X_temp[-i,]
+		fit_temp<-multinom(Estimated_PMI~.,data=data_temp,maxit=10000)
+		temp<-predict(fit_temp,newdata=X_temp[i,])
+		counter<-c(counter,as.numeric(temp==X_temp[i,1]))
+	}
+	loo_pmi<-c(loo_pmi,sum(counter)/length(counter))
+}
+
+
+X.mat<-cbind(subset(meta_weight_train,select=c("Estimated_PMI","Age","Sex","Season","BMI")),t((data_weight_train[rownames(pmi_candidate[1:4]),,drop=F])))
+fit_final<-multinom(Estimated_PMI~.,data=X.mat,maxit=1000)
+table(predict(fit_final,X.mat),X.mat$Estimated_PMI)
+table(predict(fit_final,testing_set),testing_set$Estimated_PMI)
+
+
+
+
+###### Testing for subregion
+std_dta<-import_biom("/Users/Le/Google Drive/Research/Human Remain Data/HPMM_TAMU_Collab/f120_r1k.biom")
+region_temp<-as.matrix(data.frame(otu_table(std_dta)))
+region_dta<-region_temp[rowSums(region_temp)>=60,]
+region_meta<-data.frame(sample_data(std_dta))
+
+deseq_region<-DESeqDataSetFromMatrix(region_dta,region_meta,design=~Sample_Area)
+deseq_result<-DESeq(deseq_region,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+
+
