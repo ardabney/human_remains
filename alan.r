@@ -1,3 +1,31 @@
+#### Aggregation function of phyloseq object
+phyloseq_summarize_taxa <- function(psdata, taxonomic.ranks = rank_names(psdata)) {
+	require(plyr)
+  if(length(taxonomic.ranks) > 1) {
+    names(taxonomic.ranks) <- taxonomic.ranks
+    llply(taxonomic.ranks, phyloseq_summarize_taxa, psdata = psdata)
+  } else {
+    taxa <- as(tax_table(psdata)[, taxonomic.ranks], 'character')
+    sum_tax_table <- summarize_taxa(as(otu_table(psdata), 'matrix'), taxa)
+    phyloseq(otu_table(sum_tax_table, taxa_are_rows = TRUE), sample_data(psdata, FALSE))    
+  }
+}
+
+summarize_taxa <- function(counts, taxonomy) {
+  if(is.matrix(taxonomy)) {
+    #message('multiple taxonomies')
+    alply(taxonomy, 2, summarize_taxa, counts = counts, .dims = TRUE)
+  } else if(is.matrix(counts)) {
+    #message('multiple counts')
+    require('plyr')
+    apply(counts, 2, summarize_taxa, taxonomy = taxonomy)
+  } else {
+    #message('summarize')
+    tapply(counts, taxonomy, sum)
+  }
+}
+
+
 ####
 #### Initial processing.
 ####
@@ -15,7 +43,7 @@ std_dta<-import_biom("../data/f120_r1k.biom")
 # Load-in the meta-data
 meta_dta<-read.delim2("../data/map_f120.txt",na.strings="na")
 row.names(meta_dta)<-meta_dta$X.SampleID
-meta_dta$BMI<-as.numeric(meta_dta$BMI)
+meta_dta$BMI<-as.numeric(as.character(meta_dta$BMI))
 
 # Reconstruct the OTU file by taking the average OTU of each body over sample_area
 std_meta_dta<-data.frame(sample_data(std_dta))
@@ -118,6 +146,7 @@ meta_weight$Manner.of.Death <- droplevels(meta_weight$Manner.of.Death)
 set.seed(101)
 ID_train<-sample(1:115,round(115*0.6))
 data_weight_train_temp<-data_weight[,ID_train]
+# Filtering
 data_weight_train<-data_weight_train_temp[rowSums(data_weight_train_temp)>=(dim(data_weight_train_temp)[2]),]
 meta_weight_train<-meta_weight[ID_train,]
 data_weight_test<-data_weight[,-ID_train]
@@ -132,6 +161,7 @@ testing_set<-data.frame(meta_weight_test,t(data_weight_test))
 de_pmi<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Estimated_PMI)
 temp_pmi<-DESeq(de_pmi,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
 padj_pmi<-subset(data.frame(results(temp_pmi)),select=padj)
+hist(results(temp_pmi)$pvalue)
 
 ## Extract the top 15 OTUs.
 pmi_selected <- padj_pmi[order(padj_pmi), , drop = FALSE]
@@ -149,6 +179,45 @@ table(pred_pmi_0, testing_set$Estimated_PMI)
 fit_pmi_selected_otu<-multinom(Estimated_PMI~.,data=X_selected_pmi,maxit=10000)
 pred_pmi_selected_otu <- predict(fit_pmi_selected_otu,newdata=testing_set)
 table(pred_pmi_selected_otu,testing_set$Estimated_PMI)
+
+
+## DESeq testing for differentially expressed OTUs with respect to MoD.
+de_mod<-DESeqDataSetFromMatrix(data_weight_train,meta_weight_train,design=~Manner.of.Death)
+temp_mod<-DESeq(de_pmi,test="LRT",reduced=~1,fitType="parametric",minReplicatesForReplace=Inf)
+padj_mod<-subset(data.frame(results(temp_mod)),select=padj)
+hist(results(temp_mod)$pvalue)
+
+## Extract the top 15 OTUs.
+mod_selected <- padj_mod[order(padj_mod), , drop = FALSE]
+selected_otu_mod<-rownames(mod_selected)[1:15]
+X_selected_mod_otu<-t((data_weight_train[selected_otu_mod,]))
+X_selected_mod<-data.frame(subset(meta_weight_train,select=c("Manner.of.Death","Age","Sex","Season","BMI")),X_selected_mod_otu)
+
+## Fit multinomial model without OTUs.
+fit_mod_0 <- multinom(Manner.of.Death ~ ., data = subset(meta_weight_train, select = 
+  c("Manner.of.Death","Age","Sex","Season","BMI")), maxit = 10000)
+pred_mod_0 <- predict(fit_mod_0, newdata = testing_set)
+table(pred_mod_0, testing_set$Estimated_PMI)
+
+## Fit multinomial model using selected features.
+fit_mod_selected_otu<-multinom(Manner.of.Death~.,data=X_selected_mod,maxit=10000)
+pred_mod_selected_otu <- predict(fit_mod_selected_otu,newdata=testing_set)
+table(pred_mod_selected_otu,testing_set$Estimated_PMI)
+
+
+
+##
+## Testing for sampling_area
+##
+std_dta
+filter_dta<-filter_taxa(std_dta,function(x)sum(x)>10,T)
+# add 1 to each cell for DESeq size estimation
+otu_table(filter_dta)<-otu_table(filter_dta)+1
+filter_dta_deseq<-phyloseq_to_deseq2(filter_dta,~Sample_Area)
+sample_area_deseq<-DESeq(filter_dta_deseq,test="LRT",reduced=~1,minReplicatesForReplace=Inf)
+padj_area<-subset(data.frame(results(sample_area_deseq)),select=padj)
+hist(results(sample_area_deseq)$pvalue)
+
 
 ##
 ## Attempted lasso. Errors thrown. Ignore below for now.
