@@ -1,0 +1,6 @@
+The main.R script is to pre-select the meta predictor, i.e., age, gender, BMI....
+Script input: train_set.rds;
+Script output: ind_meta.rds;
+Script function: perform the logisitc regression for selecting the meta predictors.
+
+How to use the script: it use the relative directory and can run under command line by 'Rscript main.R' under the directory.
