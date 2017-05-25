@@ -1,6 +1,0 @@
-The main.R script is to train the model according to the preselected predictors
-Script input: train_set.rds, ind_meta.rds, ind_otu.rds;
-Script output: pred.rds;
-Script function: train the predicting model through logistic regression with preselected meta and otu predictors.
-
-How to use the script: it use the relative directory and can run under command line by 'Rscript main.R' under the directory.

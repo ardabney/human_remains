@@ -1,6 +1,0 @@
-The main.R script is to pre-select the OTU predictor.
-Script input: train_set.rds;
-Script output: ind_otu.rds;
-Script function: perform the Indicator Species Analysis for selecting OTU predictor. ISA is a non-parameteric method, see detail in Table 1 from http://adn.biol.umontreal.ca/~numericalecology/Reprints/Legendre_Encyclopedia_of_Biodiversity_2013.pdf.
-
-How to use the script: it use the relative directory and can run under command line by 'Rscript main.R' under the directory.
