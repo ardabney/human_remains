@@ -1,2 +1,2 @@
 # human_remains
-Code for Dr. Benbow's human remains data.
+The codes and plots about the Exploratory Data Analysis (EDA) of Human Remains data.
