@@ -1,6 +1,0 @@
-f120_r1k.biom is the raw data file, a OTU table. OTU stands for Operational Taxonomic Units, a taxa (http://www.drive5.com/usearch/manual/otu_definition.html).
-
-The OTU table comprised 3 tables:
-1. OTU by Sample table: each cell contains the count for each OTU of each sample;
-2. OTU by Taxa table: the traditional taxa name for each OTU;
-3. meta-data table: the design matrix for the Sample 

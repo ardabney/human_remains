@@ -1,6 +1,0 @@
-The main.R script is to perform the prediction on the testing data
-Script input: test_data.rds, pred.rds;
-Script output: predicted probability;
-Script function: test the predicting model through logistic regression with trained model.
-
-How to use the script: it use the relative directory and can run under command line by 'Rscript main.R' under the directory.

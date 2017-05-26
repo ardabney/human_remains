@@ -1,6 +1,0 @@
-The main.R script is to split the clean data file.
-Script input: clean_data.rds;
-Script output: test_data.rds (40% of the data), train_set.rds (60% of the data);
-Script function: split the clean data into training and testing sets.
-
-How to use the script: it use the relative directory and can run under command line by 'Rscript main.R' under the directory.

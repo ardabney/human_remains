@@ -1,7 +1,0 @@
-The main.R script is to process the the raw data file.
-Script input: f120_r1k.biom;
-Script output: a RDS file, contains a list with 2 tabls, meta-data and otu-data;
-Script function: select samples that are fully measured in all six sampleareas, umbilicus, nares, ears, eyes, rectum, buccal;
-Script dependents: phyloseq package (https://www.bioconductor.org/packages/release/bioc/html/phyloseq.html);
-
-How to use the script: it use the relative directory and can run under command line by 'Rscript main.R' under the directory.
