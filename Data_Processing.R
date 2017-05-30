@@ -10,6 +10,18 @@ m_dta <- data.frame(sample_data(std_dta)) #meta data
 OTU_dta <- data.frame(otu_table(std_dta)) #OTU data
 t_dta <- data.frame(tax_table(std_dta)) #Taxa data
 
+# Adjust variables into correct formats
+m_dta$BMI <- as.numeric(m_dta$BMI)
+m_dta$Age <- as.numeric(m_dta$Age)
+m_dta$Estimated_PMI <- factor(m_dta$Estimated_PMI,levels=c("12","<24",">24",">48",">72"), ordered=T)
+m_dta$Race <- factor(m_dta$Race)
+m_dta$Manner.of.Death <- factor(m_dta$Manner.of.Death,levels=c("Natural","Accident","Suicide","Homicide"),ordered=T)
+m_dta$Season <- factor(m_dta$Season,levels=c("Spring","Summer","Autumn","Winter"),ordered=T)
+m_dta$Sex <- factor(m_dta$Sex)
+m_dta$Weight_Status <- factor(m_dta$Weight_Status,levels=c("Underweight","Normal Weight","Overweight","Obese","Severe Obesity","Morbid Obesity","Super Obese"))
+m_dta$Event_Location <- factor(m_dta$Event_Location)
+m_dta$Sample_Area <- factor(m_dta$Sample_Area,levels=c("Buccal","Ears","Eyes","Nares", "Rectum", "Umbilicus"))
+
 # Data Processing - Meta
 mt_dta<-m_dta[!duplicated(m_dta$Pack_ID),] #patients
 row.names(mt_dta)<-mt_dta$Pack_ID
