@@ -64,5 +64,5 @@ training <- data.frame(train_mt,train_otu)
 pmi_mult <- multinom(Estimated_PMI ~ ., data = training, MaxNWts=1500)
 testing <- data.frame(test_mt,test_otu)
 pred_pmi <- predict(pmi_mult, newdata = testing)
-table(pred_pmi, testing$Estimated_PMI) #Note: I'm not sure why 12 appears on this table
+table(pred_pmi, testing$Estimated_PMI)
 confusionMatrix(pred_pmi, testing$Estimated_PMI)
