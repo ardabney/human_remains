@@ -124,3 +124,43 @@ for(f in 1:length(f_sizes)) {
   }
 }
 acc_f = rowMeans(acc_f_b)
+
+# 420 features appears to be the optimal number of classifiers - not sure, if done correctly
+p_val_otu <- NULL
+for(i in 1:926){
+  selected <- data.frame(meta_dta,otu_dta[,i])
+  pmi_fit <- multinom(Estimated_PMI ~ ., selected, model = TRUE)
+  test_fit <- Anova(pmi_fit)
+  p_val_otu[i] <- test_fit[9,3]
+}
+oo = order(p_val_otu)
+select_otu <- otu_dta[,oo[1:420]]
+
+train<-sample(1:120,80)
+train_mt<-meta_dta[train,]
+train_otu<-select_otu[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- select_otu[-train,]
+
+training <- data.frame(train_mt,train_otu)
+pmi_mult <- multinom(Estimated_PMI ~ ., data = training, MaxNWts=2000)
+testing <- data.frame(test_mt,test_otu)
+pred_pmi <- predict(pmi_mult, newdata = testing)
+table(pred_pmi, testing$Estimated_PMI) 
+(c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
+
+# Random Forest w/Boruta Feature Selection (note: I'm not sure how to do CV with this)
+install.packages("Boruta")
+library(Boruta)
+mta_dta<-meta_dta[!is.na(meta_dta$BMI),]
+otu_dta<- otu_dta[!is.na(meta_dta$BMI),]
+
+data <- data.frame(mta_dta,otu_dta)
+train<-sample(1:114,75)
+dta_train <- data[train,]
+dta_test <- data[-train,]
+boruta.train <- Boruta(Estimated_PMI ~ ., data = dta_train, doTrace = 2)
+print(boruta.train)
+final.boruta <- TentativeRoughFix(boruta.train)
+f <- getConfirmedFormula(final.boruta)
+randomForest(f, data=dta_train)
