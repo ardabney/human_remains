@@ -128,26 +128,61 @@ acc_f = rowMeans(acc_f_b)
 # 420 features appears to be the optimal number of classifiers - not sure, if done correctly
 p_val_otu <- NULL
 for(i in 1:926){
-  selected <- data.frame(meta_dta,otu_dta[,i])
+  selected <- data.frame(train_mt,train_otu[,i])
   pmi_fit <- multinom(Estimated_PMI ~ ., selected, model = TRUE)
   test_fit <- Anova(pmi_fit)
   p_val_otu[i] <- test_fit[9,3]
 }
 oo = order(p_val_otu)
-select_otu <- otu_dta[,oo[1:420]]
-
-train<-sample(1:120,80)
-train_mt<-meta_dta[train,]
-train_otu<-select_otu[train,]
-test_mt <- meta_dta[-train,]
-test_otu <- select_otu[-train,]
+select_otu <- train_otu[,oo[1:420]]
 
 training <- data.frame(train_mt,train_otu)
-pmi_mult <- multinom(Estimated_PMI ~ ., data = training, MaxNWts=2000)
+pmi_mult <- multinom(Estimated_PMI ~ ., data = training, MaxNWts=20000)
 testing <- data.frame(test_mt,test_otu)
 pred_pmi <- predict(pmi_mult, newdata = testing)
 table(pred_pmi, testing$Estimated_PMI) 
 (c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
+
+# Multinomial Model w/ Wrapper Method Feature Selection (note: although it has a extremely high - 95% accuracy - this model doesn't use any of the meta variables, so I'm not sure it is the best to use)
+
+#Testing & Training Sets
+set.seed(101)
+train<-sample(1:120,80)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+train_set <- data.frame(train_mt,train_otu)
+test_set <- data.frame(test_mt,test_otu)
+decr = TRUE
+old = 0
+select <- 1
+decr = TRUE
+while(decr == TRUE){
+  acc <- NULL
+  for(i in (1:935)[-select]){
+    pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=2000)
+    pred_pmi <- predict(pmi_mult, newdata = testing)
+    c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI)
+    acc[i] <- c_matr$overall[1]
+  }
+ new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+ new <- max(acc, na.rm = TRUE)
+ dif <- new - old
+ if(dif <= 0){
+   decr = FALSE
+ }
+ if(dif > 0){
+ select <- c(select, new_select)
+ old <- new
+ }
+}
+
+pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select)], MaxNWts=2000)
+pred_pmi <- predict(pmi_mult, newdata = testing)
+confusionMatrix(pred_pmi, testing$Estimated_PMI)
+
 
 # Random Forest w/Boruta Feature Selection (note: I'm not sure how to do CV with this)
 install.packages("Boruta")
