@@ -143,7 +143,7 @@ pred_pmi <- predict(pmi_mult, newdata = testing)
 table(pred_pmi, testing$Estimated_PMI) 
 (c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
 
-# Multinomial Model w/ Wrapper Method Feature Selection (note: although it has a extremely high - 95% accuracy - this model doesn't use any of the meta variables, so I'm not sure it is the best to use)
+# Multinomial Model w/ Wrapper Method Feature Selection (note: although it has a extremely high - 95% accuracy - this model does not appear to be very robust)
 
 #Testing & Training Sets
 set.seed(101)
@@ -163,8 +163,8 @@ while(decr == TRUE){
   acc <- NULL
   for(i in (1:935)[-select]){
     pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=2000)
-    pred_pmi <- predict(pmi_mult, newdata = testing)
-    c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI)
+    pred_pmi <- predict(pmi_mult, newdata = test_set)
+    c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
     acc[i] <- c_matr$overall[1]
   }
  new_select <- which(acc == max(acc, na.rm = TRUE))[1]
@@ -180,9 +180,28 @@ while(decr == TRUE){
 }
 
 pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select)], MaxNWts=2000)
-pred_pmi <- predict(pmi_mult, newdata = testing)
-confusionMatrix(pred_pmi, testing$Estimated_PMI)
+pred_pmi <- predict(pmi_mult, newdata = test_set)
+confusionMatrix(pred_pmi, test_set$Estimated_PMI)
 
+#Note: Based on resampling, it would appear this model isn't robust with accuracy ranging from .35 to .95 depending on the seed set 
+acc <- matrix(NA, 1000,1)
+for(i in 1:1000){
+  set.seed(i)
+  train<-sample(1:120,80)
+  train_mt <- meta_dta[train,]
+  train_otu <-  otu_dta[train,]
+  test_mt <- meta_dta[-train,]
+  test_otu <- otu_dta[-train,]
+  train_set <- data.frame(train_mt,train_otu)
+  test_set <- data.frame(test_mt,test_otu)
+  pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select)], MaxNWts=2000)
+  pred_pmi <- predict(pmi_mult, newdata = test_set)
+  c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+  acc[i] <- c_matr$overall[1]
+}
+hist(acc)
+table(acc)
+boxplot(acc)
 
 # Random Forest w/Boruta Feature Selection (note: I'm not sure how to do CV with this)
 install.packages("Boruta")
