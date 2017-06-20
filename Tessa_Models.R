@@ -6,6 +6,7 @@ library(phyloseq)
 library(nnet)
 library(car)
 library(caret)
+library(randomForest)
 
 #import data
 std_dta  <- import_biom("f120_r1k.biom") #whole data
@@ -38,7 +39,7 @@ for (i in unique(m_dta$Pack_ID)){
   temp_id<-rownames(m_dta[m_dta$Pack_ID%in%i,])
   ave_otu_dta[,i]<-rowMeans(OTU_dta[,temp_id])
 }
-otu_dta <-t(data.frame(ave_otu_dta))
+otu_dta <-t(round(data.frame(ave_otu_dta)))
 
 # Feature Selection (Note: This section takes a bit of time to run.)
 p_val_otu <- NULL
@@ -54,8 +55,8 @@ select_otu <- otu_dta[,select]
 #Creating Test and Training Data
 set.seed(101)
 train<-sample(1:120,80)
-train_mt<-meta_dta[train,]
-train_otu<-select_otu[train,]
+train_mt <-meta_dta[train,]
+train_otu  <-select_otu[train,]
 test_mt <- meta_dta[-train,]
 test_otu <- select_otu[-train,]
 
@@ -64,16 +65,15 @@ training <- data.frame(train_mt,train_otu)
 pmi_mult <- multinom(Estimated_PMI ~ ., data = training, MaxNWts=1500)
 testing <- data.frame(test_mt,test_otu)
 pred_pmi <- predict(pmi_mult, newdata = testing)
-table(pred_pmi, testing$Estimated_PMI) 
-confusionMatrix(pred_pmi, testing$Estimated_PMI)
+(c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
 
-#Cross Validation: 
+#Cross Validation: Feature Selection with Filter Method
 
 #Testing & Training Sets
 set.seed(101)
 train<-sample(1:120,80)
-train_mt<-meta_dta[train,]
-train_otu<-  otu_dta[train,]
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
 test_mt <- meta_dta[-train,]
 test_otu <- otu_dta[-train,]
 
@@ -143,7 +143,8 @@ pred_pmi <- predict(pmi_mult, newdata = testing)
 table(pred_pmi, testing$Estimated_PMI) 
 (c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
 
-# Multinomial Model w/ Wrapper Method Feature Selection (note: although it has a extremely high - 95% accuracy - this model does not appear to be very robust)
+# Multinomial Model w/ Forward Stepwise Method Feature Selection (note: although it has a extremely high - 95% accuracy - this model doesn't use any of the meta variables, so I'm not sure it is the best to use)
+# This method stops when the accuracy stops increasing
 
 #Testing & Training Sets
 set.seed(101)
@@ -203,6 +204,226 @@ hist(acc)
 table(acc)
 boxplot(acc)
 
+# Multinomial Model w/ Forward Stepwise Method Feature Selection (note: although it has a extremely high - 95% accuracy - this model doesn't use any of the meta variables, so I'm not sure it is the best to use)
+# This method calculates all accuracies and picks highest
+
+#Testing & Training Sets
+set.seed(101)
+train<-sample(1:120,80)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+train_set <- data.frame(train_mt,train_otu)
+test_set <- data.frame(test_mt,test_otu)
+decr = TRUE
+old = 0
+select <- 1
+decr = TRUE
+acc_j = NULL
+for(j in 1:934){
+  acc <- NULL
+  for(i in (1:935)[-select]){
+    pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=20000)
+    pred_pmi <- predict(pmi_mult, newdata = test_set)
+    c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+    acc[i] <- c_matr$overall[1]
+  }
+  new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+  new <- max(acc, na.rm = TRUE)
+  dif <- new - old
+  acc_j[j] <- new
+  select <- c(select, new_select)
+  old <- new
+}
+
+#Note: Manually Stopped after 5 hours, only 156 variables were processed, but this was plenty to see a general pattern
+
+# 97.5% accurate 
+pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select[1:14])], MaxNWts=2000)
+pred_pmi <- predict(pmi_mult, newdata = test_set)
+confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+
+#Note: Based on resampling, it would appear this model isn't robust with accuracy ranging from .375 to .975 depending on the seed set 
+acc <- matrix(NA, 1000,1)
+for(i in 1:1000){
+  set.seed(i)
+  train<-sample(1:120,80)
+  train_mt <- meta_dta[train,]
+  train_otu <-  otu_dta[train,]
+  test_mt <- meta_dta[-train,]
+  test_otu <- otu_dta[-train,]
+  train_set <- data.frame(train_mt,train_otu)
+  test_set <- data.frame(test_mt,test_otu)
+  pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select[1:14])], MaxNWts=2000)
+  pred_pmi <- predict(pmi_mult, newdata = test_set)
+  c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+  acc[i] <- c_matr$overall[1]
+}
+hist(acc)
+table(acc)
+boxplot(acc)
+
+
+# Backward Stepwise Feature Selection w/ Multinomial model
+# Note: Haven't run yet, may need to debug
+set.seed(101)
+train<-sample(1:120,80)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+train_set <- data.frame(train_mt,train_otu)
+test_set <- data.frame(test_mt,test_otu)
+decr = TRUE
+old = 0
+pmi <- 1
+decr = TRUE
+remv <- 0
+while(decr == TRUE){
+  acc <- NULL
+  for(i in (1:935)[-c(pmi,remv)]){
+    pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,-c(remv,i)], MaxNWts=20000)
+    pred_pmi <- predict(pmi_mult, newdata = test_set)
+    c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+    acc[i] <- c_matr$overall[1]
+  }
+  new_remove <- which(acc == max(acc, na.rm = TRUE))[1]
+  new <- max(acc, na.rm = TRUE)
+  dif <- new - old
+  if(dif <= 0){
+    decr = FALSE
+  }
+  if(dif > 0){
+    remv <- c(remv, new_remove)
+    old <- new
+  }
+}
+
+pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select)], MaxNWts=2000)
+pred_pmi <- predict(pmi_mult, newdata = test_set)
+confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+
+# KNN - Error thrown regarding NAs, but NAs were removed so I'm unsure of how to proceed 
+library(class)
+otu_dta<- otu_dta[!is.na(meta_dta$BMI),]
+meta_dta<-meta_dta[!is.na(meta_dta$BMI),]
+pred_KNN <- rep(NA, 935)
+set.seed(101)
+train<-sample(1:114,75)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+train_set <- data.frame(train_mt,train_otu)
+test_set <- data.frame(test_mt,test_otu)
+for(k in 1:935){
+  pred_KNN_k <- knn(train_set, test_set, train_set$Estimated_PMI, k=k)
+  pred_KNN[k] <- mean(pred_KNN_k == test_set$Estimated_PMI)
+}
+plot(1:935, pred_KNN)
+
+
+# Forward Stepwise Method with random forest - Infinite Loop possibly, appears to not work
+otu_dta<- otu_dta[!is.na(meta_dta$BMI),]
+meta_dta<-meta_dta[!is.na(meta_dta$BMI),]
+set.seed(101)
+train<-sample(1:114,75)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+train_set <- data.frame(train_mt,train_otu)
+test_set <- data.frame(test_mt,test_otu)
+decr = TRUE
+old = 0
+select <- 1
+decr = TRUE
+while(decr == TRUE){
+  acc <- NULL
+  for(i in (1:935)[-select]){
+    pmi_rf <- randomForest(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=2000)
+    pred_rf <- predict(pmi_rf, newdata = test_set)
+    c_matr <- confusionMatrix(pred_rf, test_set$Estimated_PMI)
+    acc[i] <- c_matr$overall[1]
+  }
+  new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+  new <- max(acc, na.rm = TRUE)
+  dif <- new - old
+  if(dif <= 0){
+    decr = FALSE
+  }
+  if(dif > 0){
+    select <- c(select, new_select)
+    old <- new
+  }
+}
+
+pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select)], MaxNWts=2000)
+pred_pmi <- predict(pmi_mult, newdata = test_set)
+confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+
+# Naive Bayes model - Forward Stepwise Feature Selection
+library(e1071)
+set.seed(101)
+train<-sample(1:120,80)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+train_set <- data.frame(train_mt,train_otu)
+test_set <- data.frame(test_mt,test_otu)
+decr = TRUE
+old = 0
+select <- 1
+decr = TRUE
+while(decr == TRUE){
+  acc <- NULL
+  for(i in (1:935)[-select]){
+    pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train_set[,c(select,i)])
+    pred_pmi <- predict(pmi_bayes, newdata = test_set)
+    c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+    acc[i] <- c_matr$overall[1]
+  }
+  new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+  new <- max(acc, na.rm = TRUE)
+  dif <- new - old
+  if(dif <= 0){
+    decr = FALSE
+  }
+  if(dif > 0){
+    select <- c(select, new_select)
+    old <- new
+  }
+}
+pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train_set[,c(select)])
+pred_pmi <- predict(pmi_bayes, newdata = test_set)
+confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+
+#Robustness of Naive Bayes Model: Also not robust, model has lower accuracy overall from the multinomial model
+acc <- matrix(NA, 1000,1)
+for(i in 1:1000){
+  set.seed(i)
+  train<-sample(1:120,80)
+  train_mt <- meta_dta[train,]
+  train_otu <-  otu_dta[train,]
+  test_mt <- meta_dta[-train,]
+  test_otu <- otu_dta[-train,]
+  train_set <- data.frame(train_mt,train_otu)
+  test_set <- data.frame(test_mt,test_otu)
+  pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train_set[,c(select)])
+  pred_pmi <- predict(pmi_bayes, newdata = test_set)
+  c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+  acc[i] <- c_matr$overall[1]
+}
+hist(acc)
+table(acc)
+boxplot(acc)
+
 # Random Forest w/Boruta Feature Selection (note: I'm not sure how to do CV with this)
 install.packages("Boruta")
 library(Boruta)
@@ -218,3 +439,5 @@ print(boruta.train)
 final.boruta <- TentativeRoughFix(boruta.train)
 f <- getConfirmedFormula(final.boruta)
 randomForest(f, data=dta_train)
+
+
