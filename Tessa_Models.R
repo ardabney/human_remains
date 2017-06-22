@@ -440,4 +440,62 @@ final.boruta <- TentativeRoughFix(boruta.train)
 f <- getConfirmedFormula(final.boruta)
 randomForest(f, data=dta_train)
 
+# Multinomial Model CV w/ Forward Stepwise Method Feature Selection
 
+#Testing & Training Sets
+set.seed(101)
+train<-sample(1:120,80)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+# We'll use 8-fold CV since 80 divides nicely into 8 folds
+
+# Divide Samples into 8 folds
+new_rand_order <-sample(1:80,80)
+fold_1 <- new_rand_order[1:10]
+fold_2 <- new_rand_order[11:20]
+fold_3 <- new_rand_order[21:30]
+fold_4 <- new_rand_order[31:40]
+fold_5 <- new_rand_order[41:50]
+fold_6 <- new_rand_order[51:60]
+fold_7 <- new_rand_order[61:70]
+fold_8 <- new_rand_order[71:80]
+fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold_8)
+
+# Cross Validation
+f_sizes = 1:934
+acc_f_b <- matrix(NA, length(f_sizes), 8) # Accuracy
+selected <- NULL
+for(b in 1:8) {
+  MT_test = train_mt[fold_samples[[b]],]
+  OTU_test = train_otu[fold_samples[[b]],] 
+  MT_train = train_mt[-fold_samples[[b]],]
+  OTU_train = train_otu[-fold_samples[[b]],] 
+  
+  ## Feature selection.
+  train_set <- data.frame(MT_train,OTU_train)
+  test_set <- data.frame(MT_test,OTU_test)
+  decr = TRUE
+  old = 0
+  select <- 1
+  decr = TRUE
+  acc_j = NULL
+  for(j in 1:934){
+    acc <- NULL
+    for(i in (1:935)[-select]){
+      pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=20000)
+      pred_pmi <- predict(pmi_mult, newdata = test_set)
+      c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+      acc[i] <- c_matr$overall[1]
+    }
+    new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+    new <- max(acc, na.rm = TRUE)
+    dif <- new - old
+    acc_f_b[j] <- new
+    select <- c(select, new_select)
+    old <- new
+  }
+}
+acc_f = rowMeans(acc_f_b)
