@@ -525,7 +525,7 @@ fold_5 <- new_rand_order[61:75]
 fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5)
 
 # Cross Validation
-f_sizes = seq(5, 935, by = 5)
+f_sizes = seq(2, 934, by = 2)
 acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 5) # Accuracy
 for(b in 1:5) {
   cat(".")
