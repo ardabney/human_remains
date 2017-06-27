@@ -499,3 +499,56 @@ for(b in 1:8) {
   }
 }
 acc_f = rowMeans(acc_f_b)
+
+#Code for Random Forest CV w/ Feature Selection based on Importance Function
+# Remove NAs
+otu_dta<- otu_dta[!is.na(meta_dta$BMI),]
+meta_dta<-meta_dta[!is.na(meta_dta$BMI),]
+
+#Testing & Training Sets
+set.seed(101)
+train <- sample(1:114,75)
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
+test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
+
+# We'll use 5-fold CV since 75 divides nicely into 5 folds
+
+# Divide Samples into 8 folds
+new_rand_order <-sample(1:75,75)
+fold_1 <- new_rand_order[1:15]
+fold_2 <- new_rand_order[16:30]
+fold_3 <- new_rand_order[31:45]
+fold_4 <- new_rand_order[46:60]
+fold_5 <- new_rand_order[61:75]
+fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5)
+
+# Cross Validation
+f_sizes = seq(5, 935, by = 5)
+acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 5) # Accuracy
+for(b in 1:5) {
+  cat(".")
+  MT_test = train_mt[fold_samples[[b]],]
+  OTU_test = train_otu[fold_samples[[b]],] 
+  MT_train = train_mt[-fold_samples[[b]],]
+  OTU_train = train_otu[-fold_samples[[b]],] 
+  
+  dta_train = data.frame(MT_train, OTU_train)
+  dta_test = data.frame(MT_test,OTU_test)
+  ## Feature selection.
+  pmi_rf <- randomForest(Estimated_PMI ~ ., data = dta_train, MaxNWts=2000)
+  oo <- order(importance(pmi_rf))
+  for(f in 1:length(f_sizes)) {
+    feature_set = c(1,oo[1:f_sizes[f]])
+    data_train <- dta_train[,feature_set]
+    data_test <- dta_test[,feature_set]
+    pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
+    pred_pmi <- predict(pmi_rf, newdata = data_test)
+    c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+    acc_f_b[f, b] = c_matr$overall[1]
+    
+  }
+}
+acc_f = rowMeans(acc_f_b)
+
