@@ -47,37 +47,36 @@ for (i in unique(m_dta$Pack_ID)){
 otu_dta <-t(data.frame(ave_otu_dta))
 
 
-# select best predictors using forward and backwar
-for(i in 1:926){
-  selected <- data.frame(meta_dta,otu_dta[,i])
-}
-#fix missing values
-selected2 <- na.omit(selected)
-
-null <- multinom(MOD~ 1,selected2,model = TRUE)
-full <- multinom(MOD~.,selected2, model = TRUE)
-step.fwd <- step(null, scope=list(lower=null, upper=full), direction="forward")
-step.bwd <- step(full, scope=list(lower=null, upper=full), direction="backward")
-
-#both left only two predictors: age_group + race
-step.fwd$anova 
-step.bwd$anova
-#fwd_select <- step.fwd$anova$Step
-
-
-#Creating Test and Training Data
-#I only dealt with meta data because only its predictos have been used 
-set.seed(300)
+#seperate training and testing
+set.seed(120)
 train<-sample(1:120,80)
-train_mt<-meta_dta[train,]
+train_mt <- meta_dta[train,]
+train_otu <-  otu_dta[train,]
 test_mt <- meta_dta[-train,]
+test_otu <- otu_dta[-train,]
 
+
+#data frame selected data
+select1 <- cbind(train_mt, train_otu)
+select2 <- na.omit(select1) #76 obs
+
+#select predictors
+null <- multinom(MOD~ 1,select2,model = TRUE)
+full <- multinom(MOD~.,select2, model = TRUE, MaxNWts=4000)
+step.fwd <- step(null, scope=list(lower=null, upper=full), direction="forward")  
+
+#backward selection is very slow
+#step.bwd <- step(full, scope=list(lower=null, upper=full), direction="backward")
+
+#see the selected predictors
+step.fwd
 
 # Multinomial Model creation and Testing
-training <- data.frame(train_mt)
-#porblem: code not robusted, I manually inputed the x variables, could be improved 
-mod_mult <- multinom(MOD ~ Age_Group + Race, data = training, MaxNWts=1500)
+#porblem: code not robusted, I manually inputed the x variables seen in last step, could be improved 
+mod_mult <- multinom(MOD ~ Race + denovo43942 + denovo211190 + denovo160622 + 
+                       denovo113977 + denovo79567 + denovo159516 + denovo26819 + 
+                       denovo13288 + denovo145648, data = select2, MaxNWts=4000)
 
-testing <- data.frame(test_mt)
+testing <- data.frame(test_mt,test_otu)
 pred_mod <- predict(mod_mult, newdata = testing)
 confusionMatrix(pred_mod, testing$MOD)
