@@ -145,7 +145,7 @@ for(b in 1:8) {
     new_select <- which(acc == max(acc, na.rm = TRUE))[1]
     new <- max(acc, na.rm = TRUE)
     dif <- new - old
-    acc_f_b[j] <- new
+    acc_f_b[j, b] <- new
     select <- c(select, new_select)
     old <- new
   }
