@@ -151,4 +151,27 @@ for(b in 1:8) {
   }
 }
 acc_f = rowMeans(acc_f_b)
-
+num_f <- 1:which(acc_f == max(acc_f))[1]
+dta_train = data.frame(train_mt, train_otu)
+dta_test = data.frame(test_mt,test_otu)
+old = 0
+select <- 1
+decr = TRUE
+for(j in num_f){
+  acc <- NULL
+  for(i in (1:935)[-select]){
+    pmi_mult <- multinom(Estimated_PMI ~ ., data = dta_train[,c(select,i)], MaxNWts=20000)
+    pred_pmi <- predict(pmi_mult, newdata = dta_test)
+    c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+    acc[i] <- c_matr$overall[1]
+  }
+  new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+  new <- max(acc, na.rm = TRUE)
+  dif <- new - old
+  select <- c(select, new_select)
+  old <- new
+}
+pmi_mult <- multinom(Estimated_PMI ~ ., data = dta_train[,c(select)], MaxNWts=20000)
+pred_pmi <- predict(pmi_mult, newdata = dta_test)
+confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+# 15 features - 97.5% accuracy
