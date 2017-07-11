@@ -122,3 +122,4 @@ for(j in num_f){
 pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = dta_train[,select])
 pred_pmi <- predict(pmi_bayes, newdata = dta_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+# 15 features - 75% accuracy
