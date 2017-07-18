@@ -459,3 +459,47 @@ confusionMatrix(preds, dta_test$Estimated_PMI)
 pmi_rf <- randomForest(Estimated_PMI ~ ., data = dta_train, MaxNWts=2000)
 preds <- predict(pmi_rf, newdata = dta_test)
 confusionMatrix(preds, dta_test$Estimated_PMI)
+
+#CV with full data set
+dta <- data.frame(meta_dta, otu_dta)
+
+# Six-fold CV
+new_rand_order <-sample(1:120,120)
+fold_1 <- new_rand_order[1:20]
+fold_2 <- new_rand_order[21:40]
+fold_3 <- new_rand_order[41:60]
+fold_4 <- new_rand_order[61:80]
+fold_5 <- new_rand_order[81:100]
+fold_6 <- new_rand_order[101:120]
+fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6)
+
+f_sizes = 1:20 #or 1:15, 1:20, 1:50, etc.
+acc_f_b <- matrix(NA, length(f_sizes), 6) # Accuracy
+for(b in 1:6) {
+  test_set = dta[fold_samples[[b]],]
+  train_set = dta[-fold_samples[[b]],]
+  
+  ## Feature selection.
+  decr = TRUE
+  old = 0
+  select <- 1
+  decr = TRUE
+  acc_j = NULL
+  for(j in f_sizes){
+    acc <- NULL
+    for(i in (1:935)[-select]){
+      pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=20000)
+      pred_pmi <- predict(pmi_mult, newdata = test_set)
+      c_matr <- confusionMatrix(pred_pmi, test_set$Estimated_PMI)
+      acc[i] <- c_matr$overall[1]
+    }
+    new_select <- which(acc == max(acc, na.rm = TRUE))[1]
+    new <- max(acc, na.rm = TRUE)
+    dif <- new - old
+    acc_f_b[j, b] <- new
+    select <- c(select, new_select)
+    old <- new
+  }
+}
+acc_f = rowMeans(acc_f_b)
+acc_f
