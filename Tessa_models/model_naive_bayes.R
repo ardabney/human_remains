@@ -123,3 +123,20 @@ pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = dta_train[,select])
 pred_pmi <- predict(pmi_bayes, newdata = dta_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
 # 15 features - 75% accuracy
+
+#  95% CI for accuracy is (0.05, 0.55)
+B <- 1000
+dta <- data.frame(meta_dta, otu_dta)
+acc_b <- NULL
+for(b in 1:B){
+  train <- sample(1:120,80, replace = TRUE)
+  train <- dta[train,]
+  test <- sample(1:120,20,replace = TRUE)
+  test <- dta[test,]
+  pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train[,select])
+  pred_pmi <- predict(pmi_bayes, newdata = test)
+  c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
+  acc_b[b] <- c_matr$overall[1]
+}
+hist(acc_b)
+quantile(acc_b, c(0.025, 0.975))
