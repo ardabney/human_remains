@@ -48,7 +48,7 @@ train_otu <-  otu_dta[train,]
 test_mt <- meta_dta[-train,]
 test_otu <- otu_dta[-train,]
 
-#Cross Validation: Feature Selection with Filter Method (P-Values)
+# Cross Validation: Feature Selection with Filter Method (P-Values)
 # We'll use 8-fold CV since 80 divides nicely into 8 folds
 
 # Divide Samples into 8 folds
@@ -64,8 +64,8 @@ fold_8 <- new_rand_order[71:80]
 fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold_8)
 
 # Cross Validation
-f_sizes = c(seq(10, 926, by = 10), 926)
-acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 8) # Misclassification Rate
+f_sizes = c(seq(10, 935, by = 10), 935)
+acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 8) # Accuracy 
 for(b in 1:8) {
   cat(".")
   MT_test = train_mt[fold_samples[[b]],]
@@ -74,46 +74,62 @@ for(b in 1:8) {
   OTU_train = train_otu[-fold_samples[[b]],] 
   
   ## Feature selection.
-  p_val_otu <- NULL
-  for(i in 1:926){
-    selected <- data.frame(MT_train,OTU_train[,i])
+  p_val <- NULL
+  dta <- data.frame(MT_train, OTU_train)
+  for(i in 2:935){
+    selected <- dta[,c(1,i)]
     pmi_fit <- multinom(Estimated_PMI ~ ., selected, model = TRUE)
     test_fit <- Anova(pmi_fit)
-    p_val_otu[i] <- test_fit[9,3]
+    p_val[i] <- test_fit$`Pr(>Chisq)`
   }
-  oo = order(p_val_otu)
+  oo = order(p_val)
   for(f in 1:length(f_sizes)) {
-    feature_set = oo[1:f_sizes[f]]
-    otu_train = OTU_train[,feature_set]
-    otu_test = OTU_test[,feature_set]
-    dta_test = data.frame(MT_test,otu_test)
-    dta_train = data.frame(MT_train,otu_train)
+    feature_set = c(1,oo[1:f_sizes[f]])
+    dta_train = dta[,feature_set]
+    dta_test = data.frame(MT_test,OTU_test)
+    dta_test = dta_test[,feature_set]
     pmi_mult <- multinom(Estimated_PMI ~ ., data = dta_train, MaxNWts=15000)
     pred_pmi <- predict(pmi_mult, newdata = dta_test)
     c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
-    acc_f_b[f, b] = 1 - c_matr$overall[1]
-    
+    acc_f_b[f, b] = c_matr$overall[1]
   }
 }
 acc_f = rowMeans(acc_f_b)
+f <- f_sizes[which(acc_f == max(acc_f))]
 
-# 420 features appears to be the optimal number of classifiers
+# 470 features w/ 23.68% Accuracy 
 p_val_otu <- NULL
-for(i in 1:926){
-  selected <- data.frame(train_mt,train_otu[,i])
+training <- data.frame(train_mt,train_otu)
+for(i in 2:935){
+  selected <- training[,c(1,i)]
   pmi_fit <- multinom(Estimated_PMI ~ ., selected, model = TRUE)
   test_fit <- Anova(pmi_fit)
-  p_val_otu[i] <- test_fit[9,3]
+  p_val[i] <- test_fit[9,3]
 }
-oo = order(p_val_otu)
-select_otu <- train_otu[,oo[1:420]]
-
-training <- data.frame(train_mt,train_otu)
-pmi_mult <- multinom(Estimated_PMI ~ ., data = training, MaxNWts=20000)
+oo = order(p_val)
+select_training <- training[,oo[1:f]]
 testing <- data.frame(test_mt,test_otu)
+
+pmi_mult <- multinom(Estimated_PMI ~ ., data = select_training, MaxNWts=20000)
 pred_pmi <- predict(pmi_mult, newdata = testing)
-table(pred_pmi, testing$Estimated_PMI) 
 (c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
+
+# Bootstrap CI For Accuracy: 
+B <- 1000
+dta <- data.frame(meta_dta, otu_dta)
+acc_b <- NULL
+for(b in 1:B){
+  train <- sample(1:120,80, replace = TRUE)
+  train <- dta[train,]
+  test <- sample(1:120,20,replace = TRUE)
+  test <- dta[test,]
+  pmi_mult <- multinom(Estimated_PMI ~ ., data = train[,oo[1:f]], MaxNWts=20000)
+  pred_pmi <- predict(pmi_mult, newdata = test)
+  c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
+  acc_b[b] <- c_matr$overall[1]
+}
+hist(acc_b)
+quantile(acc_b, c(0.025, 0.975))
 
 # Multinomial Model CV w/ Forward Stepwise Method Feature Selection (8-fold)
 # Note: This takes a long time to run, recommend changing f_sizes smaller value
