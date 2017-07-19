@@ -92,6 +92,8 @@ for(b in 1:5) {
 }
 acc_f = rowMeans(acc_f_b)
 f <- f_sizes[which(acc_f == max(acc_f))]
+
+# XXX Features With XXX% Accuracy
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
 pmi_rf <- randomForest(Estimated_PMI ~ ., data = dta_train, MaxNWts=2000)
@@ -102,6 +104,25 @@ data_test <- dta_test[,feature_set]
 pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
 pred_pmi <- predict(pmi_rf, newdata = data_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+
+# Bootstrap CI for Accuracy: 
+B <- 1000
+dta <- data.frame(meta_dta, otu_dta)
+acc_b <- NULL
+for(b in 1:B){
+  train <- sample(1:120,80, replace = TRUE)
+  train <- dta[train,]
+  test <- sample(1:120,20,replace = TRUE)
+  test <- dta[test,]
+  data_train <- train[,feature_set]
+  data_test <- test[,feature_set]
+  pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
+  pred_pmi <- predict(pmi_rf, newdata = data_test)
+  c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+  acc_b[b] <- c_matr$overall[1]
+}
+hist(acc_b)
+quantile(acc_b, c(0.025, 0.975))
 
 # Random Forest CV w/ Wrapper Method Feature Selection (Forward Stepwise)
 f_sizes = 1:20
