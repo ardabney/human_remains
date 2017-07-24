@@ -52,6 +52,7 @@ test_otu <- otu_dta[-train,]
 
 # Naives Bayes CV w/ Wrapper Method Feature Selection (Forward Stepwise) - 75% Accurate
 # We'll use 8-fold CV since 80 divides nicely into 8 folds
+# ******************** #
 
 # Divide Samples into 8 folds
 new_rand_order <-sample(1:80,80)
