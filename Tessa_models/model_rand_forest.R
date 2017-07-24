@@ -54,6 +54,7 @@ test_otu <- otu_dta[-train,]
 
 # Random Forest CV w/ Filter Method Feature Selection (Using Importance function as filter)
 # We'll use 5-fold CV since 75 divides nicely into 5 folds
+# **************************** #
 
 # Divide Samples into 5 folds
 new_rand_order <-sample(1:75,75)
@@ -93,7 +94,7 @@ for(b in 1:5) {
 acc_f = rowMeans(acc_f_b)
 f <- f_sizes[which(acc_f == max(acc_f))]
 
-# XXX Features With XXX% Accuracy
+# 656 Features w/ 41.03% Accuracy
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
 pmi_rf <- randomForest(Estimated_PMI ~ ., data = dta_train, MaxNWts=2000)
@@ -105,20 +106,30 @@ pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
 pred_pmi <- predict(pmi_rf, newdata = data_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
 
-# Bootstrap CI for Accuracy: 
+# 95% CI for accuracy is (0.5, 0.9)
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
 acc_b <- NULL
 for(b in 1:B){
+  valid <- FALSE
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
   test <- sample(1:120,20,replace = TRUE)
   test <- dta[test,]
+  while(valid == FALSE){
+    for(i in table(train$Estimated_PMI) > 0){
+      if(i == FALSE){
+        train <- sample(1:120,80, replace = TRUE)
+        train <- dta[train,]
+      }
+      else {valid <- TRUE}
+    }
+  }
   data_train <- train[,feature_set]
   data_test <- test[,feature_set]
-  pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
+  pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000, na.action = na.omit)
   pred_pmi <- predict(pmi_rf, newdata = data_test)
-  c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
+  c_matr <- confusionMatrix(pred_pmi, data_test$Estimated_PMI)
   acc_b[b] <- c_matr$overall[1]
 }
 hist(acc_b)
