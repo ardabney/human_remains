@@ -50,6 +50,7 @@ test_otu <- otu_dta[-train,]
 
 # Cross Validation: Feature Selection with Filter Method (P-Values)
 # We'll use 8-fold CV since 80 divides nicely into 8 folds
+# ********************** #
 
 # Divide Samples into 8 folds
 new_rand_order <-sample(1:80,80)
@@ -133,6 +134,7 @@ quantile(acc_b, c(0.025, 0.975))
 
 # Multinomial Model CV w/ Forward Stepwise Method Feature Selection (8-fold)
 # Note: This takes a long time to run, recommend changing f_sizes smaller value
+# *************** #
 f_sizes = 1:934 #or 1:15, 1:20, 1:50, etc.
 acc_f_b <- matrix(NA, length(f_sizes), 8) # Accuracy
 selected <- NULL
