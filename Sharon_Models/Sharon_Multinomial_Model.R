@@ -150,3 +150,18 @@ mod_mult <- multinom(fit_train[,3]~., data = select_var_fit, MaxNWts=20000) #use
 pred_mult <- predict(mod_mult, newdata = fit_test) #model predicts using test set
 (c_matr <- confusionMatrix(pred_mult, fit_test$MOD))
 
+##---------------------------bootstrap--------------------
+
+s=10000
+accuracy=numeric(s)
+for(i in 1:s)
+{
+  boot_sample <- sample(1:nrow(fit_train),replace=T)
+  subres=fit_train[boot_sample,3]
+  subpre=select_var_fit[boot_sample,]
+  mod_mult <- multinom(subres~.,data=subpre, MaxNWts=20000)
+  pred_mult <- predict(mod_mult, newdata = fit_test)
+  accuracy[i]=sum(as.vector(fit_test$MOD)==as.vector(pred_mult))/length(pred_mult)
+}
+quantile(accuracy,c(0.025,0.975))
+sd(accuracy)
