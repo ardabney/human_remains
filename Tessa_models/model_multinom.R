@@ -98,7 +98,7 @@ for(b in 1:8) {
 acc_f = rowMeans(acc_f_b)
 f <- f_sizes[which(acc_f == max(acc_f))]
 
-# 470 features w/ 23.68% Accuracy 
+# 470 features w/ 28.95% accuracy
 p_val_otu <- NULL
 training <- data.frame(train_mt,train_otu)
 for(i in 2:935){
@@ -116,6 +116,7 @@ pred_pmi <- predict(pmi_mult, newdata = testing)
 (c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
 
 # Bootstrap CI For Accuracy: 
+# Stand. Dev. 0.1152175 (approx. 12%)
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
 acc_b <- NULL
@@ -131,6 +132,7 @@ for(b in 1:B){
 }
 hist(acc_b)
 quantile(acc_b, c(0.025, 0.975))
+sd(acc_b)
 
 # Multinomial Model CV w/ Forward Stepwise Method Feature Selection (8-fold)
 # Note: This takes a long time to run, recommend changing f_sizes smaller value
@@ -192,9 +194,10 @@ for(j in num_f){
 pmi_mult <- multinom(Estimated_PMI ~ ., data = dta_train[,c(select)], MaxNWts=20000)
 pred_pmi <- predict(pmi_mult, newdata = dta_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
-# 15 features - 97.5% accuracy
+# 17 features - 97.5% accuracy
 
 # 95% CI for accuracy is (0.40, 0.85)
+# Stand. Dev. 0.1133545
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
 acc_b <- NULL
@@ -210,4 +213,4 @@ for(b in 1:B){
 }
 hist(acc_b)
 quantile(acc_b, c(0.025, 0.975))
-
+sd(acc_b)
