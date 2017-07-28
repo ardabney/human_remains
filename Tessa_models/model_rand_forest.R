@@ -114,7 +114,7 @@ for(b in 1:B){
   valid <- FALSE
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
-  test <- sample(1:120,20,replace = TRUE)
+  test <- sample(1:120,40,replace = TRUE)
   test <- dta[test,]
   while(valid == FALSE){
     for(i in table(train$Estimated_PMI) > 0){
