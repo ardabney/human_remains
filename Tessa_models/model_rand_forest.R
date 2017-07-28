@@ -106,7 +106,8 @@ pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
 pred_pmi <- predict(pmi_rf, newdata = data_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
 
-# 95% CI for accuracy is (0.5, 0.9)
+# 95% CI for accuracy is (0.5641026, 0.8684211)
+# Stand. Dev. 0.07909884
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
 acc_b <- NULL
@@ -134,6 +135,7 @@ for(b in 1:B){
 }
 hist(acc_b)
 quantile(acc_b, c(0.025, 0.975))
+sd(acc_b)
 
 # Random Forest CV w/ Wrapper Method Feature Selection (Forward Stepwise)
 f_sizes = 1:20
