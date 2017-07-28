@@ -125,7 +125,8 @@ pred_pmi <- predict(pmi_bayes, newdata = dta_test)
 confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
 # 15 features - 75% accuracy
 
-#  95% CI for accuracy is (0.05, 0.55)
+#  95% CI for accuracy is (0.099375 0.525)
+# Stand. Dev. 0.1154541
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
 acc_b <- NULL
@@ -141,3 +142,4 @@ for(b in 1:B){
 }
 hist(acc_b)
 quantile(acc_b, c(0.025, 0.975))
+sd(acc_b)
