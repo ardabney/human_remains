@@ -123,7 +123,7 @@ acc_b <- NULL
 for(b in 1:B){
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
-  test <- sample(1:120,20,replace = TRUE)
+  test <- sample(1:120,40,replace = TRUE)
   test <- dta[test,]
   pmi_mult <- multinom(Estimated_PMI ~ ., data = train[,oo[1:f]], MaxNWts=20000)
   pred_pmi <- predict(pmi_mult, newdata = test)
@@ -204,7 +204,7 @@ acc_b <- NULL
 for(b in 1:B){
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
-  test <- sample(1:120,20,replace = TRUE)
+  test <- sample(1:120,40,replace = TRUE)
   test <- dta[test,]
   pmi_mult <- multinom(Estimated_PMI ~ ., data = train[,c(select)], MaxNWts=20000)
   pred_pmi <- predict(pmi_mult, newdata = test)
