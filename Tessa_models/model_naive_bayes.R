@@ -132,7 +132,7 @@ acc_b <- NULL
 for(b in 1:B){
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
-  test <- sample(1:120,20,replace = TRUE)
+  test <- sample(1:120,40,replace = TRUE)
   test <- dta[test,]
   pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train[,select])
   pred_pmi <- predict(pmi_bayes, newdata = test)
