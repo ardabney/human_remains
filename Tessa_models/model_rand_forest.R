@@ -91,8 +91,10 @@ for(b in 1:5) {
     
   }
 }
-acc_f = rowMeans(acc_f_b)
-f <- f_sizes[which(acc_f == max(acc_f))]
+acc_f_r = rowMeans(acc_f_b)
+f <- f_sizes[which(acc_f_r == max(acc_f_r))]
+points(f_sizes, acc_f_r)
+lines(f_sizes, acc_f_r)
 
 # 656 Features w/ 41.03% Accuracy
 dta_train = data.frame(train_mt, train_otu)
@@ -133,7 +135,7 @@ for(b in 1:B){
   c_matr <- confusionMatrix(pred_pmi, data_test$Estimated_PMI)
   acc_b[b] <- c_matr$overall[1]
 }
-hist(acc_b)
+hist(acc_b, xlab = "Accuracy", main = "Random Forest w/ Filter Method Accuracies")
 quantile(acc_b, c(0.025, 0.975))
 sd(acc_b)
 
