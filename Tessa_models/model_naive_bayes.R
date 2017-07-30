@@ -67,7 +67,7 @@ fold_8 <- new_rand_order[71:80]
 fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold_8)
 
 # Cross Validation
-f_sizes = 1:20
+f_sizes = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934)
 acc_j_b <- matrix(NA, length(f_sizes), 8) # Accuracy
 selected <- NULL
 for(b in 1:8) {
@@ -98,9 +98,11 @@ for(b in 1:8) {
     old <- new
   }
 }
-acc_f = rowMeans(acc_j_b)
-num_f <- 1:which(acc_f == max(acc_f))[1]
-num_f
+acc_f_b = rowMeans(acc_j_b)
+num_f <- 1:which(acc_f_b == max(acc_f_b))[1]
+points(f_sizes, acc_f_b)
+lines(f_sizes, acc_f_b)
+
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
 old = 0
@@ -140,6 +142,6 @@ for(b in 1:B){
   c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
   acc_b[b] <- c_matr$overall[1]
 }
-hist(acc_b)
+hist(acc_b, xlab = "Accuracy", main = "Naive Bayes w/ Wrapper Method Accuracies")
 quantile(acc_b, c(0.025, 0.975))
 sd(acc_b)
