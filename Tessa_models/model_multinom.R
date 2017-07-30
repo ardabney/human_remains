@@ -95,8 +95,9 @@ for(b in 1:8) {
     acc_f_b[f, b] = c_matr$overall[1]
   }
 }
-acc_f = rowMeans(acc_f_b)
-f <- f_sizes[which(acc_f == max(acc_f))]
+acc_f_m_1 = rowMeans(acc_f_b)
+f <- f_sizes[which(acc_f_m_1 == max(acc_f_m_1))]
+plot(f_sizes, acc_f_m_1, type = "both")
 
 # 470 features w/ 28.95% accuracy
 p_val_otu <- NULL
@@ -130,14 +131,14 @@ for(b in 1:B){
   c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
   acc_b[b] <- c_matr$overall[1]
 }
-hist(acc_b)
+hist(acc_b, xlab = "Accuracy", main = "Multinomial w/ Filter Method Accuracies")
 quantile(acc_b, c(0.025, 0.975))
 sd(acc_b)
 
 # Multinomial Model CV w/ Forward Stepwise Method Feature Selection (8-fold)
 # Note: This takes a long time to run, recommend changing f_sizes smaller value
 # *************** #
-f_sizes = 1:934 #or 1:15, 1:20, 1:50, etc.
+f_sizes = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934) #or 1:15, 1:20, 1:50, etc.
 acc_f_b <- matrix(NA, length(f_sizes), 8) # Accuracy
 selected <- NULL
 for(b in 1:8) {
@@ -170,8 +171,12 @@ for(b in 1:8) {
     old <- new
   }
 }
-acc_f = rowMeans(acc_f_b)
-num_f <- 1:which(acc_f == max(acc_f))[1]
+acc_f_m_2 = rowMeans(acc_f_b)
+num_f <- 1:which(acc_f_m_2 == max(acc_f_m_2))[1]
+points(f_sizes, acc_f_m_2)
+lines(f_sizes, acc_f_m_2)
+
+# Building final model w/ selected features
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
 old = 0
@@ -211,6 +216,6 @@ for(b in 1:B){
   c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
   acc_b[b] <- c_matr$overall[1]
 }
-hist(acc_b)
+hist(acc_b, xlab = "Accuracy", main = "Multinomial w/ Wrapper Method Accuracies")
 quantile(acc_b, c(0.025, 0.975))
 sd(acc_b)
