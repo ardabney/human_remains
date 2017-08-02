@@ -78,14 +78,21 @@ s=10000
 accuracy=numeric(s)
 for(i in 1:s)
 {
-  boot_sample <- sample(1:nrow(dta),replace=T)
-  boot.dta=dta[boot_sample,]
+  dta_train = data.frame(na.omit(cross_train))
+  dta_test = data.frame((na.omit(cross_test)))
+  boot_sample <- sample(1:nrow(dta_train),replace=T)
+  
+  subres=dta_train[boot_sample,3] #responses
+  subpre=dta_train[boot_sample,] #predictors
+  
   mod_mult <- multinom(formula = MOD ~ denovo43942 + denovo211190 + denovo160622 + 
                          denovo113977 + denovo79567 + denovo159516 + denovo26819 + 
                          denovo13288 + denovo145648, 
-                       data = na.omit(boot.dta), model = TRUE)
-  pred_mult <- predict(mod_mult, newdata = boot.dta)
-  accuracy[i]=sum(as.vector(boot.dta$MOD)==as.vector(pred_mult))/length(pred_mult)
+                       data = subpre, model = TRUE)
+  pred_mult <- predict(mod_mult, newdata = dta_test)
+  #accuracy[i]=sum(as.vector(boot.dta$MOD)==as.vector(pred_mult))/length(pred_mult)
+  c_matr <- confusionMatrix(pred_mult,dta_test$MOD)
+  accuracy[i] = c_matr$overall[1]
 }
 quantile(accuracy,c(0.025,0.975))
 sd(accuracy)
