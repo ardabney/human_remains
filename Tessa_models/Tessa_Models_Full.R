@@ -46,7 +46,7 @@ otu_dta <-t(round(data.frame(ave_otu_dta)))
 feat_num <- NULL
 stand_dev <- NULL
 CI <- matrix(NA, 4,2)
-accuracy <- NULL
+med_accuracy <- NULL
 
 #Testing & Training Sets
 set.seed(101)
@@ -72,7 +72,7 @@ fold_8 <- new_rand_order[71:80]
 fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold_8)
 
 # Cross Validation
-f_sizes = c(seq(10, 934, by = 10), 934)
+f_sizes_1 = c(seq(10, 934, by = 10), 934)
 acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 8) # Accuracy 
 for(b in 1:8) {
   cat(".")
@@ -105,7 +105,6 @@ for(b in 1:8) {
 acc_f_m_1 = rowMeans(acc_f_b)
 f <- f_sizes[which(acc_f_m_1 == max(acc_f_m_1))]
 feat_num[1] <- f
-plot(f_sizes, acc_f_m_1, type = "l")
 
 # 470 features w/ 28.95% accuracy
 p_val_otu <- NULL
@@ -119,17 +118,15 @@ for(i in 2:935){
 oo = order(p_val)
 select_training <- training[,oo[1:f]]
 testing <- data.frame(test_mt,test_otu)
-
 pmi_mult <- multinom(Estimated_PMI ~ ., data = select_training, MaxNWts=20000)
 pred_pmi <- predict(pmi_mult, newdata = testing)
-(c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI))
-accuracy[1] <- c_matr$overall[1]
+c_matr <- confusionMatrix(pred_pmi, testing$Estimated_PMI)
 
 # Bootstrap CI for Accuracy: (0.53, 0.84)
 # Stand. Dev. 0.08128782
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
-acc_b <- NULL
+acc_b1 <- NULL
 for(b in 1:B){
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
@@ -138,16 +135,16 @@ for(b in 1:B){
   pmi_mult <- multinom(Estimated_PMI ~ ., data = train[,oo[1:f]], MaxNWts=20000)
   pred_pmi <- predict(pmi_mult, newdata = test)
   c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
-  acc_b[b] <- c_matr$overall[1]
+  acc_b1[b] <- c_matr$overall[1]
 }
-hist(acc_b, xlab = "Accuracy", main = "Multinomial w/ Filter Method Accuracies")
-CI[1, ] <- quantile(acc_b, c(0.025, 0.975))
-stand_dev[1] <- sd(acc_b)
+CI[1, ] <- quantile(acc_b1, c(0.025, 0.975))
+stand_dev[1] <- sd(acc_b1)
+med_accuracy[1] <- median(acc_b1)
 
 # Multinomial Model CV w/ Forward Stepwise Method Feature Selection (8-fold)
 # Be sure to have run lines 54-64 before running the loop
 # Note: This takes a long time to run, recommend changing f_sizes smaller value
-f_sizes = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934) #or 1:15, 1:20, 1:50, etc.
+f_sizes_2 = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934) #or 1:15, 1:20, 1:50, etc.
 acc_f_b <- matrix(NA, length(f_sizes), 8) # Accuracy
 for(b in 1:8) {
   MT_test = train_mt[fold_samples[[b]],]
@@ -180,9 +177,8 @@ for(b in 1:8) {
   }
 }
 acc_f_m_2 = rowMeans(acc_f_b)
-num_f <- 1:f_sizes(which(acc_f_m_2 == max(acc_f_m_2)))[1]
-feat_num[2] <- f_sizes(which(acc_f_m_2 == max(acc_f_m_2)))[1]
-lines(f_sizes, acc_f_m_2)
+num_f <- 1:f_sizes[which(acc_f_m_2 == max(acc_f_m_2))][1]
+feat_num[2] <- f_sizes[which(acc_f_m_2 == max(acc_f_m_2))][1]
 
 # Building final model w/ selected features
 dta_train = data.frame(train_mt, train_otu)
@@ -207,14 +203,13 @@ for(j in num_f){
 pmi_mult <- multinom(Estimated_PMI ~ ., data = dta_train[,c(select)], MaxNWts=20000)
 pred_pmi <- predict(pmi_mult, newdata = dta_test)
 c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
-accuracy[2] <- c_matr$overall[1]
-# 17 features - 97.5% accuracy
+# 15 features - 97.5% accuracy
 
 # 95% CI for accuracy is (0.40, 0.85)
 # Stand. Dev. 0.1133545
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
-acc_b <- NULL
+acc_b2 <- NULL
 for(b in 1:B){
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
@@ -223,12 +218,12 @@ for(b in 1:B){
   pmi_mult <- multinom(Estimated_PMI ~ ., data = train[,c(select)], MaxNWts=20000)
   pred_pmi <- predict(pmi_mult, newdata = test)
   c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
-  acc_b[b] <- c_matr$overall[1]
+  acc_b2[b] <- c_matr$overall[1]
 }
-hist(acc_b, xlab = "Accuracy", main = "Multinomial w/ Wrapper Method Accuracies")
-CI[2, ] <- quantile(acc_b, c(0.025, 0.975))
-stand_dev[2] <- sd(acc_b)
 
+CI[2, ] <- quantile(acc_b2, c(0.025, 0.975))
+stand_dev[2] <- sd(acc_b2)
+med_accuracy[2] <- med_accuracy(acc_b2)
 
 # Naive Bayes Model 
 # Testing & Training Sets
@@ -255,7 +250,7 @@ fold_8 <- new_rand_order[71:80]
 fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold_8)
 
 # Cross Validation
-f_sizes = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934)
+f_sizes_3 = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934)
 acc_j_b <- matrix(NA, length(f_sizes), 8) # Accuracy
 selected <- NULL
 for(b in 1:8) {
@@ -287,9 +282,8 @@ for(b in 1:8) {
   }
 }
 acc_f_b = rowMeans(acc_j_b)
-num_f <- 1:which(acc_f_b == max(acc_f_b))[1]
-feat_num[3] <- which(acc_f_b == max(acc_f_b))[1]
-lines(f_sizes, acc_f_b)
+num_f <- 1:f_sizes[which(acc_f_b == max(acc_f_b))][1]
+feat_num[3] <- f_sizes[which(acc_f_b == max(acc_f_b))][1]
 
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
@@ -313,14 +307,13 @@ for(j in num_f){
 pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = dta_train[,select])
 pred_pmi <- predict(pmi_bayes, newdata = dta_test)
 c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
-accuracy[3] <- c_matr$overall[1]
 # 15 features - 75% accuracy
 
 #  95% CI for accuracy is (0.099375, 0.525)
 # Stand. Dev. 0.1154541
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
-acc_b <- NULL
+acc_b3 <- NULL
 for(b in 1:B){
   train <- sample(1:120,80, replace = TRUE)
   train <- dta[train,]
@@ -329,11 +322,12 @@ for(b in 1:B){
   pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train[,select])
   pred_pmi <- predict(pmi_bayes, newdata = test)
   c_matr <- confusionMatrix(pred_pmi, test$Estimated_PMI)
-  acc_b[b] <- c_matr$overall[1]
+  acc_b3[b] <- c_matr$overall[1]
 }
-hist(acc_b, xlab = "Accuracy", main = "Naive Bayes w/ Wrapper Method Accuracies")
-CI[3, ] <- quantile(acc_b, c(0.025, 0.975))
-stand_dev[3] <- sd(acc_b)
+
+CI[3, ] <- quantile(acc_b3, c(0.025, 0.975))
+stand_dev[3] <- sd(acc_b3)
+med_accuracy[3] <- median(acc_b3)
 
 # Random Forests
 # Remove NAs
@@ -361,7 +355,7 @@ fold_5 <- new_rand_order[61:75]
 fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5)
 
 # Cross Validation
-f_sizes = seq(2, 934, by = 2)
+f_sizes_4 = seq(2, 934, by = 2)
 acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 5) # Accuracy
 for(b in 1:5) {
   cat(".")
@@ -389,7 +383,6 @@ for(b in 1:5) {
 acc_f_r = rowMeans(acc_f_b)
 f <- f_sizes[which(acc_f_r == max(acc_f_r))]
 feat_num[4] <- f
-lines(f_sizes, acc_f_r)
 
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
@@ -401,14 +394,13 @@ data_test <- dta_test[,feature_set]
 pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
 pred_pmi <- predict(pmi_rf, newdata = data_test)
 c_matr <- confusionMatrix(pred_pmi, dta_test$Estimated_PMI)
-accuracy[4] <- c_matr$overall[1]
 # 656 Features w/ 41.03% Accuracy
 
 # 95% CI for accuracy is (0.5641026, 0.8684211)
 # Stand. Dev. 0.07909884
 B <- 1000
 dta <- data.frame(meta_dta, otu_dta)
-acc_b <- NULL
+acc_b4 <- NULL
 for(b in 1:B){
   valid <- FALSE
   train <- sample(1:120,80, replace = TRUE)
@@ -429,14 +421,24 @@ for(b in 1:B){
   pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000, na.action = na.omit)
   pred_pmi <- predict(pmi_rf, newdata = data_test)
   c_matr <- confusionMatrix(pred_pmi, data_test$Estimated_PMI)
-  acc_b[b] <- c_matr$overall[1]
+  acc_b4[b] <- c_matr$overall[1]
 }
-hist(acc_b, xlab = "Accuracy", main = "Random Forest w/ Filter Method Accuracies")
-CI[4, ] <- quantile(acc_b, c(0.025, 0.975))
-stand_dev[4] <- sd(acc_b)
+CI[4, ] <- quantile(acc_b4, c(0.025, 0.975))
+stand_dev[4] <- sd(acc_b4)
+med_accuracy[4] <- median(acc_b4) 
 
 #print num of features
 feat_num
 accuracy
 CI
 stand_dev
+
+# Histograms
+hist(acc_b1, xlab = "Accuracy", main = "Multinomial w/ Filter Method Accuracies")
+hist(acc_b2, xlab = "Accuracy", main = "Multinomial w/ Wrapper Method Accuracies")
+hist(acc_b3, xlab = "Accuracy", main = "Naive Bayes w/ Wrapper Method Accuracies")
+hist(acc_b4, xlab = "Accuracy", main = "Random Forest w/ Filter Method Accuracies")
+
+# Line Plots
+plot(f_sizes, acc_f_m_1, type = "l", xlab = 'Feature Set Size', ylab = "Accuracy", main = "Accuracy of Models Across Feature Sizes")
+lines(f_sizes, acc_f_m_2, col='blue')
