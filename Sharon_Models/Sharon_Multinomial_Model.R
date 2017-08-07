@@ -123,13 +123,15 @@ for(b in 1:8) { #loop for each fold
   }
 }
 acc_f = rowMeans(acc_f_b) #average accuracy for each f of all 8 folds 
-which.max(acc_f) #find maximum accuracy location --> location(f) * 10 = how many features selected
-
+f_select= f_sizes[which.max(acc_f)] #find maximum accuracy location
+plot(f_sizes, acc_f, type = "both", xlab='feature size (f_sizes)', ylab='accuracy (acc_f)', 
+     main='Feature size vs. Accuracy in Multinom (Filter) ')
 
 ##------------------------extract selected variables and fit model----------------------------------------
 
-# f = 9 --> 90 features selected
+# f = 9 --> f_select = 90 features selected
 # fit data to multinomial model
+# accuracy = 0.4
 
 #extract selected variables
 p_val <- NULL
@@ -143,15 +145,17 @@ for(i in c(1:2,4:ncol(fit_train))){
 }
 p_val[3]=2
 oo_fit = order(p_val)
-select_var_fit = data.frame(fit_train[,oo_fit[1:90]]) #get top ranked predictors
+select_var_fit = data.frame(fit_train[,oo_fit[1:f_select]]) #get top ranked predictors
 
 
 mod_mult <- multinom(fit_train[,3]~., data = select_var_fit, MaxNWts=20000) #use selected variables to fit multinomial model
 pred_mult <- predict(mod_mult, newdata = fit_test) #model predicts using test set
 (c_matr <- confusionMatrix(pred_mult, fit_test$MOD))
 
-##---------------------------bootstrap--------------------
-
+##---------------------------bootstrap--------------------------------
+# 95% CI = (0.200, 0.575)
+# sd(accuracy) = 0.09810584
+# mean(accuracy) = 0.3767375
 s=10000
 accuracy=numeric(s)
 for(i in 1:s)
@@ -159,9 +163,16 @@ for(i in 1:s)
   boot_sample <- sample(1:nrow(fit_train),replace=T)
   subres=fit_train[boot_sample,3]
   subpre=select_var_fit[boot_sample,]
+  
+  boot_sample1 <- sample(1:nrow(fit_test),replace=T)
+  subtest=fit_test[boot_sample1,]
+  
   mod_mult <- multinom(subres~.,data=subpre, MaxNWts=20000)
-  pred_mult <- predict(mod_mult, newdata = fit_test)
-  accuracy[i]=sum(as.vector(fit_test$MOD)==as.vector(pred_mult))/length(pred_mult)
+  pred_mult <- predict(mod_mult, newdata = subtest)
+  #accuracy[i]=sum(as.vector(fit_test$MOD)==as.vector(pred_mult))/length(pred_mult)
+  c_matr <- confusionMatrix(pred_mult,subtest$MOD)
+  (accuracy[i] = c_matr$overall[1])
 }
 quantile(accuracy,c(0.025,0.975))
 sd(accuracy)
+mean(accuracy)
