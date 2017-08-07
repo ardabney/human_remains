@@ -100,57 +100,69 @@ for(b in 1:8) { #loop for each fold
     feature_set = oo[1:f_sizes[f]]
     
     #data frame of selected variables with top p-values
-    select_train = data.frame(fold_train_meta,fold_train_otu)[,c(3,feature_set)] 
-    select_test = data.frame(fold_test_meta,fold_test_otu)[,c(3,feature_set)]
+    select_train = na.omit(data.frame(fold_train_meta,fold_train_otu)[,c(3,feature_set)])
+    select_test = na.omit(data.frame(fold_test_meta,fold_test_otu)[,c(3,feature_set)])
     
-    fit_mod <- randomForest(MOD ~ ., data = na.omit(select_train), MaxNWts=15000) #fit model using selected predictors 
-    pred_mod <- predict(fit_mod, newdata = na.omit(select_test))
+    fit_mod <- randomForest(MOD ~ ., data = select_train, MaxNWts=15000) #fit model using selected predictors 
+    pred_mod <- predict(fit_mod, newdata = select_test)
     
-    c_matr <- confusionMatrix(pred_mod, na.omit(select_test)$MOD) #one confusion matrix for one f
+    c_matr <- confusionMatrix(pred_mod, select_test$MOD) #one confusion matrix for one f
   
     acc_f_b[f, b] = c_matr$overall[1] #93*8 matrix
   }
 }
 acc_f = rowMeans(acc_f_b) #average accuracy for each f of all 8 folds 
-which.max(acc_f) #find maximum accuracy location --> location(f) * 10 = how many features selected
-#660 features selected
+f_select= f_sizes[which.max(acc_f)] #find maximum accuracy location
+plot(f_sizes, acc_f, type = "both", xlab='feature size (f_sizes)', ylab='accuracy (acc_f)', 
+     main='Feature size vs. Accuracy in Multinom (Wrapper) ')
+#580 features selected
 
 ##------------------------extract selected variables and fit model----------------------------------------
 
-# f = 66 
+# f = 58
 # fit data to multinomial model
 
 #extract selected variables
 fit_train <- na.omit(data.frame(train_meta, train_otu)) #here use the train & test set for the whole data
 fit_test <- na.omit(data.frame(test_meta, test_otu))
-dta=data.frame(meta_dta,otu_dta)
+#dta=data.frame(meta_dta,otu_dta)
 
-mod_rf = randomForest(MOD~., data=na.omit(fit_train), MaxNWts=20000)
-oo_fit = order(importance(mod_rf),decreasing=T)
+mod_rf = randomForest(MOD~., data=fit_train, MaxNWts=20000)
+oo_fit = rownames(importance(mod_rf))[order(importance(mod_rf),decreasing=T)]
 
-select_var_fit = data.frame(dta[,oo_fit[1:66]])
-rf_train = fit_train[,c(3,oo_fit[1:66])]
-rf_test = fit_test[,c(3,oo_fit[1:66])]
+#select_var_fit = data.frame(dta[,oo_fit[1:f_select]])
+rf_train = na.omit(fit_train[,c("MOD",oo_fit[1:f_select])])
+rf_test = na.omit(fit_test[,c("MOD",oo_fit[1:f_select])])
 
 mod_rf <- randomForest(MOD~., data = rf_train, MaxNWts=20000) #use selected variables to fit multinomial model
 pred_rf <- predict(mod_rf, newdata = rf_test) #model predicts using test set
-(c_matr <- confusionMatrix(pred_rf, fit_test$MOD))
-# accuracy = 0.525
+(c_matr <- confusionMatrix(pred_rf, rf_test$MOD))
+# accuracy = 0.625, CI=(0.458, 0.7727)
+
 ##---------------------------bootstrap--------------------
 
-s=100
+s=1000
+set.seed(120)
 accuracy=numeric(s)
 for(i in 1:s)
 {
   boot_sample <- sample(1:nrow(rf_train),replace=T) #train data from selected varaibles
   #subres=rf_train[boot_sample,3] #responses
   subpre=rf_train[boot_sample,] #predictors
-  mod_rf <- randomForest(MOD~.,data=na.omit(subpre), MaxNWts=20000)
-  pred_rf <- predict(mod_rf, newdata = rf_test)
-  #accuracy[i]=sum(as.vector(fit_test$MOD)==as.vector(pred_mult))/length(pred_mult)
-  c_matr <- confusionMatrix(pred_rf,na.omit(rf_test)$MOD)
-  accuracy[i] = c_matr$overall[1]
+  boot_sample1 <- sample(1:nrow(rf_test),replace=T)
+  subtest=rf_test[boot_sample1,]
+  
+  subpre$MOD=factor(subpre$MOD)
+  subtest$MOD=factor(subtest$MOD)
+  
+  mod_rf <- randomForest(MOD~.,data=subpre, MaxNWts=20000)
+  pred_rf <- predict(mod_rf, newdata = subtest)
+  #c_matr <- confusionMatrix(pred_rf,subtest$MOD)
+  #(accuracy[i] = c_matr$overall[1])
+  accuracy[i]=sum(as.vector(subtest$MOD)==as.vector(pred_rf))/length(pred_rf)
 }
 quantile(accuracy,c(0.025,0.975))
 sd(accuracy)
-#CI = 0.36,0.575, s= 0.2495071
+mean(accuracy)
+
+#CI=(0.30, 0.65), sd=0.088629, mean(accuracy)=0.472575
