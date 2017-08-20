@@ -73,7 +73,7 @@ fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold
 
 # Cross Validation
 f_sizes_1 = c(seq(10, 934, by = 10), 934)
-acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 8) # Accuracy 
+acc_f_b = matrix(NA, nrow = length(f_sizes_1), ncol = 8) # Accuracy 
 for(b in 1:8) {
   cat(".")
   MT_test = train_mt[fold_samples[[b]],]
@@ -91,8 +91,8 @@ for(b in 1:8) {
     p_val[i] <- test_fit$`Pr(>Chisq)`
   }
   oo = order(p_val)
-  for(f in 1:length(f_sizes)) {
-    feature_set = c(1,oo[1:f_sizes[f]])
+  for(f in 1:length(f_sizes_1)) {
+    feature_set = c(1,oo[1:f_sizes_1[f]])
     dta_train = dta[,feature_set]
     dta_test = data.frame(MT_test,OTU_test)
     dta_test = dta_test[,feature_set]
@@ -103,7 +103,7 @@ for(b in 1:8) {
   }
 }
 acc_f_m_1 = rowMeans(acc_f_b)
-f <- f_sizes[which(acc_f_m_1 == max(acc_f_m_1))]
+f <- f_sizes_1[which(acc_f_m_1 == max(acc_f_m_1))]
 feat_num[1] <- f
 
 # 470 features w/ 28.95% accuracy
@@ -145,7 +145,7 @@ med_accuracy[1] <- median(acc_b1)
 # Be sure to have run lines 54-64 before running the loop
 # Note: This takes a long time to run, recommend changing f_sizes smaller value
 f_sizes_2 = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934) #or 1:15, 1:20, 1:50, etc.
-acc_f_b <- matrix(NA, length(f_sizes), 8) # Accuracy
+acc_f_b <- matrix(NA, length(f_sizes_2), 8) # Accuracy
 for(b in 1:8) {
   MT_test = train_mt[fold_samples[[b]],]
   OTU_test = train_otu[fold_samples[[b]],] 
@@ -160,7 +160,7 @@ for(b in 1:8) {
   select <- 1
   decr = TRUE
   acc_j = NULL
-  for(j in 1:length(f_sizes)){
+  for(j in 1:length(f_sizes_2)){
     acc <- NULL
     for(i in (1:935)[-select]){
       pmi_mult <- multinom(Estimated_PMI ~ ., data = train_set[,c(select,i)], MaxNWts=20000)
@@ -177,8 +177,8 @@ for(b in 1:8) {
   }
 }
 acc_f_m_2 = rowMeans(acc_f_b)
-num_f <- 1:f_sizes[which(acc_f_m_2 == max(acc_f_m_2))][1]
-feat_num[2] <- f_sizes[which(acc_f_m_2 == max(acc_f_m_2))][1]
+num_f <- 1:f_sizes_2[which(acc_f_m_2 == max(acc_f_m_2))][1]
+feat_num[2] <- f_sizes_2[which(acc_f_m_2 == max(acc_f_m_2))][1]
 
 # Building final model w/ selected features
 dta_train = data.frame(train_mt, train_otu)
@@ -223,7 +223,7 @@ for(b in 1:B){
 
 CI[2, ] <- quantile(acc_b2, c(0.025, 0.975))
 stand_dev[2] <- sd(acc_b2)
-med_accuracy[2] <- med_accuracy(acc_b2)
+med_accuracy[2] <- median(acc_b2)
 
 # Naive Bayes Model 
 # Testing & Training Sets
@@ -251,7 +251,7 @@ fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5, fold_6, fold_7, fold
 
 # Cross Validation
 f_sizes_3 = c(1:20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 934)
-acc_j_b <- matrix(NA, length(f_sizes), 8) # Accuracy
+acc_j_b <- matrix(NA, length(f_sizes_3), 8) # Accuracy
 selected <- NULL
 for(b in 1:8) {
   MT_test = train_mt[fold_samples[[b]],]
@@ -265,7 +265,7 @@ for(b in 1:8) {
   old = 0
   select <- 1
   decr = TRUE
-  for(j in 1:20){
+  for(j in 1:length(f_sizes_3)){
     acc <- NULL
     for(i in (1:935)[-select]){
       pmi_bayes <- naiveBayes(Estimated_PMI ~ ., data = train_set[,c(select,i)])
@@ -282,8 +282,8 @@ for(b in 1:8) {
   }
 }
 acc_f_b = rowMeans(acc_j_b)
-num_f <- 1:f_sizes[which(acc_f_b == max(acc_f_b))][1]
-feat_num[3] <- f_sizes[which(acc_f_b == max(acc_f_b))][1]
+num_f <- 1:f_sizes_3[which(acc_f_b == max(acc_f_b))][1]
+feat_num[3] <- f_sizes_3[which(acc_f_b == max(acc_f_b))][1]
 
 dta_train = data.frame(train_mt, train_otu)
 dta_test = data.frame(test_mt,test_otu)
@@ -356,7 +356,7 @@ fold_samples = list(fold_1, fold_2, fold_3, fold_4, fold_5)
 
 # Cross Validation
 f_sizes_4 = seq(2, 934, by = 2)
-acc_f_b = matrix(NA, nrow = length(f_sizes), ncol = 5) # Accuracy
+acc_f_b = matrix(NA, nrow = length(f_sizes_4), ncol = 5) # Accuracy
 for(b in 1:5) {
   cat(".")
   MT_test = train_mt[fold_samples[[b]],]
@@ -369,8 +369,8 @@ for(b in 1:5) {
   ## Feature selection.
   pmi_rf <- randomForest(Estimated_PMI ~ ., data = dta_train, MaxNWts=2000)
   oo <- order(importance(pmi_rf), decreasing=TRUE)
-  for(f in 1:length(f_sizes)) {
-    feature_set = c(1,oo[1:f_sizes[f]])
+  for(f in 1:length(f_sizes_4)) {
+    feature_set = c(1,oo[1:f_sizes_4[f]])
     data_train <- dta_train[,feature_set]
     data_test <- dta_test[,feature_set]
     pmi_rf <- randomForest(Estimated_PMI ~ ., data = data_train, MaxNWts=2000)
@@ -381,7 +381,7 @@ for(b in 1:5) {
   }
 }
 acc_f_r = rowMeans(acc_f_b)
-f <- f_sizes[which(acc_f_r == max(acc_f_r))]
+f <- f_sizes_4[which(acc_f_r == max(acc_f_r))]
 feat_num[4] <- f
 
 dta_train = data.frame(train_mt, train_otu)
@@ -429,7 +429,7 @@ med_accuracy[4] <- median(acc_b4)
 
 #print num of features
 feat_num
-accuracy
+med_accuracy
 CI
 stand_dev
 
@@ -440,5 +440,5 @@ hist(acc_b3, xlab = "Accuracy", main = "Naive Bayes w/ Wrapper Method Accuracies
 hist(acc_b4, xlab = "Accuracy", main = "Random Forest w/ Filter Method Accuracies")
 
 # Line Plots
-plot(f_sizes, acc_f_m_1, type = "l", xlab = 'Feature Set Size', ylab = "Accuracy", main = "Accuracy of Models Across Feature Sizes")
-lines(f_sizes, acc_f_m_2, col='blue')
+plot(f_sizes_1, acc_f_m_1, type = "l", xlab = 'Feature Set Size', ylab = "Accuracy", main = "Accuracy of Models Across Feature Sizes")
+lines(f_sizes_2, acc_f_m_2, col='blue')
